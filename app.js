@@ -23,9 +23,8 @@ function aplicarTema(tema) {
   document.documentElement.setAttribute('data-theme', tema);
 }
 
-function themeToggleButtonHtml(id = 'btn-theme-toggle') {
+function themeIconsSvgHtml() {
   return `
-    <button class="btn-theme-toggle" id="${id}" title="Alternar tema">
       <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/>
         <path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -45,7 +44,21 @@ function themeToggleButtonHtml(id = 'btn-theme-toggle') {
       <svg class="icon-leaf" width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M21 3c0 9-5 15-11 17-3 1-6 0-7-1s-2-4-1-7C4 6 10 3 21 3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         <path d="M9 19c2-5 6-9 11-11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
+      </svg>`;
+}
+
+function themeToggleButtonHtml(id = 'btn-theme-toggle') {
+  return `
+    <button class="btn-theme-toggle" id="${id}" title="Alternar tema">
+      ${themeIconsSvgHtml()}
+    </button>`;
+}
+
+function themeMenuItemHtml(id) {
+  return `
+    <button type="button" class="header-menu-item btn-theme-toggle" id="${id}" role="menuitem" title="Alternar tema">
+      ${themeIconsSvgHtml()}
+      <span>Alternar tema</span>
     </button>`;
 }
 
@@ -92,6 +105,7 @@ const WEBHOOK = {
   // TODO: trocar para o webhook de produção quando estiver pronto
   abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
   historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
+  pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
 
   // Teste (ativo quando URL contém ?test)
   test_busca_cliente  : 'https://n8n.dbnet.com.vc/webhook-test/ideia-busca-cliente',
@@ -100,6 +114,7 @@ const WEBHOOK = {
   test_busca_todas_os : 'https://n8n.dbnet.com.vc/webhook-test/ideia-busca-todas-os',
   test_abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
   test_historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
+  test_pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
 
   token : 'Bearer 6a9d4bda75d5c9a7c60d4f3d22cdc5c39a83bd27f3b5399bb027834e524d6dd4',
 
@@ -133,6 +148,10 @@ const WEBHOOK = {
   [4] historico_potencia
       Envia:   { "login_id": 101 }
       Retorna: [{ "sinal_rx": "-22.59", "temperatura": "45.00", "data": "05/08/2026" }, ...]
+
+  [5] pegar_url_acs
+      Envia:   { "login": "23442andre" } — login PPPoE (número + nome), não o login_id
+      Retorna: string/URL do ACS (aceita string direta, { "url": "..." } ou array de qualquer um dos dois)
 */
 
 // ══════════════════════════════════════════════════════
@@ -550,13 +569,22 @@ function renderDashboard(cliente, contrato) {
       </svg>
       <span>Abrir atendimento</span>
     </button>
-    <button class="btn-reload" id="btn-reload-dashboard" title="Recarregar dados do cliente">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
-    ${themeToggleButtonHtml()}
+    <div class="header-menu" id="header-menu">
+      <button class="btn-header-menu" id="btn-header-menu-toggle" title="Mais ações" aria-haspopup="true" aria-expanded="false">
+        ${iconKebab()}
+      </button>
+      <div class="header-menu-dropdown hidden" id="header-menu-dropdown" role="menu">
+        <button type="button" class="header-menu-item" id="menu-item-reload" role="menuitem" title="Recarregar dados do cliente">
+          <span id="menu-item-reload-icon">${iconReload()}</span>
+          <span>Atualizar</span>
+        </button>
+        ${themeMenuItemHtml('menu-item-theme')}
+        <button type="button" class="header-menu-item" id="menu-item-acs" role="menuitem" title="Abrir ACS" data-login="${esc(contrato.login_pppoe || '')}">
+          <span id="menu-item-acs-icon">${iconExternalLink()}</span>
+          <span>Abrir ACS</span>
+        </button>
+      </div>
+    </div>
   `;
 
   document.getElementById('dashboard-grid').innerHTML = [
@@ -1170,6 +1198,14 @@ function normalizarHistoricoPotencia(raw) {
   return [];
 }
 
+// Aceita string direta, { url } ou array de qualquer um dos dois
+function extrairUrlAcs(raw) {
+  if (typeof raw === 'string') return raw || null;
+  if (Array.isArray(raw)) return extrairUrlAcs(raw[0]);
+  if (raw && typeof raw === 'object') return raw.acsUrl || raw.url || raw.link || raw.acs_url || null;
+  return null;
+}
+
 function potenciaRow(p) {
   const dbm = parseFloat(p.sinal_rx);
   const cls = !isNaN(dbm) && dbm >= -26 ? 'pot-good' : 'pot-bad';
@@ -1197,31 +1233,109 @@ function osStatusClass(s) {
 }
 
 // ══════════════════════════════════════════════════════
+// MENU DE AÇÕES DO CABEÇALHO (⋮)
+// ══════════════════════════════════════════════════════
+function toggleHeaderMenu() {
+  const dropdown = document.getElementById('header-menu-dropdown');
+  const btn      = document.getElementById('btn-header-menu-toggle');
+  if (!dropdown || !btn) return;
+  const vaiAbrir = dropdown.classList.contains('hidden');
+  dropdown.classList.toggle('hidden', !vaiAbrir);
+  btn.setAttribute('aria-expanded', String(vaiAbrir));
+}
+
+function closeHeaderMenu() {
+  const dropdown = document.getElementById('header-menu-dropdown');
+  const btn      = document.getElementById('btn-header-menu-toggle');
+  if (dropdown) dropdown.classList.add('hidden');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+// Listener único (independe de o topbar ser re-renderizado a cada troca de cliente)
+document.addEventListener('click', (e) => {
+  const wrap     = document.getElementById('header-menu');
+  const dropdown = document.getElementById('header-menu-dropdown');
+  if (!wrap || !dropdown || dropdown.classList.contains('hidden')) return;
+  if (!wrap.contains(e.target)) closeHeaderMenu();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const dropdown = document.getElementById('header-menu-dropdown');
+  if (dropdown && !dropdown.classList.contains('hidden')) closeHeaderMenu();
+});
+
+// ══════════════════════════════════════════════════════
 // BIND EVENTOS PÓS-RENDER
 // ══════════════════════════════════════════════════════
 function bindDashboardEvents(contrato) {
+  // Menu de três pontos (ações secundárias do cabeçalho)
+  const btnHeaderMenu = document.getElementById('btn-header-menu-toggle');
+  if (btnHeaderMenu) {
+    btnHeaderMenu.addEventListener('click', () => toggleHeaderMenu());
+  }
+
   // Recarregar dados do cliente atual (sem perder a seleção)
-  const btnReload = document.getElementById('btn-reload-dashboard');
-  if (btnReload) {
-    btnReload.addEventListener('click', async () => {
-      if (btnReload.dataset.loading) return;
-      btnReload.dataset.loading = '1';
-      btnReload.classList.add('spinning');
+  const menuItemReload = document.getElementById('menu-item-reload');
+  if (menuItemReload) {
+    menuItemReload.addEventListener('click', async () => {
+      if (menuItemReload.dataset.loading) return;
+      menuItemReload.dataset.loading = '1';
+      document.getElementById('menu-item-reload-icon').classList.add('spinning');
+      closeHeaderMenu();
       try {
         await etapa4_carregarDashboard(state.loginSelecionado);
       } catch (err) {
         console.error('[recarregar dashboard]', err);
         alert('Erro ao recarregar os dados. Tente novamente.');
       } finally {
-        delete btnReload.dataset.loading;
-        btnReload.classList.remove('spinning');
+        delete menuItemReload.dataset.loading;
       }
     });
   }
 
   // Alternar tema (5 opções em sequência)
-  bindThemeToggleButton(document.getElementById('btn-theme-toggle'));
+  const menuItemTheme = document.getElementById('menu-item-theme');
+  if (menuItemTheme) {
+    menuItemTheme.addEventListener('click', () => {
+      alternarTema();
+      atualizarTituloTema();
+      closeHeaderMenu();
+    });
+  }
   atualizarTituloTema();
+
+  // Abrir ACS — busca a URL via webhook e abre em nova aba
+  const menuItemAcs = document.getElementById('menu-item-acs');
+  if (menuItemAcs) {
+    menuItemAcs.addEventListener('click', async () => {
+      if (menuItemAcs.dataset.loading) return;
+      menuItemAcs.dataset.loading = '1';
+      document.getElementById('menu-item-acs-icon').classList.add('spinning');
+      closeHeaderMenu();
+
+      // Abre a aba já no clique (senão o navegador bloqueia como pop-up
+      // depois do await) e só navega para a URL quando ela chegar.
+      const novaAba = window.open('', '_blank');
+      if (novaAba) novaAba.opener = null;
+
+      try {
+        const raw = await postWebhook(WEBHOOK.url('pegar_url_acs'), {
+          login: menuItemAcs.dataset.login
+        });
+        const url = extrairUrlAcs(raw);
+        if (!url) throw new Error('URL do ACS não veio na resposta do webhook');
+        if (novaAba) novaAba.location.href = url;
+        else window.open(url, '_blank', 'noopener');
+      } catch (err) {
+        console.error('[pegar_url_acs]', err);
+        if (novaAba) novaAba.close();
+        alert('Erro ao abrir o ACS. Tente novamente.');
+      } finally {
+        delete menuItemAcs.dataset.loading;
+        document.getElementById('menu-item-acs-icon').classList.remove('spinning');
+      }
+    });
+  }
 
   // Abrir atendimento — abre o modal de novo atendimento
   const btnAbrirAtendimento = document.getElementById('btn-abrir-atendimento');
@@ -2206,6 +2320,26 @@ function iconCopy() {
 function iconCheck() {
   return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none">
     <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function iconKebab() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="5"  r="1.8" fill="currentColor"/>
+    <circle cx="12" cy="12" r="1.8" fill="currentColor"/>
+    <circle cx="12" cy="19" r="1.8" fill="currentColor"/>
+  </svg>`;
+}
+function iconReload() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function iconExternalLink() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
   </svg>`;
 }
 function iconWallet(color) {
