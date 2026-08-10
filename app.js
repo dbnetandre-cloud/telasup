@@ -6,26 +6,75 @@
 ══════════════════════════════════════════════════════ */
 
 // ══════════════════════════════════════════════════════
-// TEMA — claro / escuro (persistido em localStorage)
+// TEMA — 5 opções, alternadas em sequência no mesmo botão
+// (persistido em localStorage)
 // ══════════════════════════════════════════════════════
 const THEME_KEY = 'ideiaSupTema';
+const TEMAS = ['dark', 'dim', 'light', 'sepia', 'green'];
+const TEMA_LABEL = {
+  dark:  'Escuro',
+  dim:   'Escuro suave',
+  light: 'Claro',
+  sepia: 'Claro sépia',
+  green: 'Verde',
+};
 
 function aplicarTema(tema) {
   document.documentElement.setAttribute('data-theme', tema);
 }
 
+function themeToggleButtonHtml(id = 'btn-theme-toggle') {
+  return `
+    <button class="btn-theme-toggle" id="${id}" title="Alternar tema">
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <svg class="icon-dim" width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/>
+      </svg>
+      <svg class="icon-sepia" width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M4 8h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M8 3.5c-.5 1 .5 1.5 0 2.5M12 3.5c-.5 1 .5 1.5 0 2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <svg class="icon-leaf" width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M21 3c0 9-5 15-11 17-3 1-6 0-7-1s-2-4-1-7C4 6 10 3 21 3z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 19c2-5 6-9 11-11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>`;
+}
+
 function alternarTema() {
-  const atual = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-  const novo  = atual === 'light' ? 'dark' : 'light';
+  const atual = document.documentElement.getAttribute('data-theme');
+  const idx   = TEMAS.includes(atual) ? TEMAS.indexOf(atual) : 0;
+  const novo  = TEMAS[(idx + 1) % TEMAS.length];
   aplicarTema(novo);
   try { localStorage.setItem(THEME_KEY, novo); } catch (_) {}
+}
+
+function atualizarTituloTema() {
+  const atual = document.documentElement.getAttribute('data-theme');
+  const idx   = TEMAS.includes(atual) ? TEMAS.indexOf(atual) : 0;
+  const proximo = TEMAS[(idx + 1) % TEMAS.length];
+  const titulo = `Tema: ${TEMA_LABEL[TEMAS[idx]]} (clique para ${TEMA_LABEL[proximo]})`;
+  document.querySelectorAll('.btn-theme-toggle').forEach(btn => { btn.title = titulo; });
+}
+
+function bindThemeToggleButton(btn) {
+  if (!btn) return;
+  btn.addEventListener('click', () => { alternarTema(); atualizarTituloTema(); });
 }
 
 // Aplica o tema salvo o quanto antes, para evitar flash de tela.
 (function initTema() {
   let salvo = null;
   try { salvo = localStorage.getItem(THEME_KEY); } catch (_) {}
-  aplicarTema(salvo === 'light' ? 'light' : 'dark');
+  aplicarTema(TEMAS.includes(salvo) ? salvo : 'dark');
 })();
 
 // ══════════════════════════════════════════════════════
@@ -42,6 +91,7 @@ const WEBHOOK = {
   busca_todas_os : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-todas-os',
   // TODO: trocar para o webhook de produção quando estiver pronto
   abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
+  historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
 
   // Teste (ativo quando URL contém ?test)
   test_busca_cliente  : 'https://n8n.dbnet.com.vc/webhook-test/ideia-busca-cliente',
@@ -49,6 +99,7 @@ const WEBHOOK = {
   test_busca_info     : 'https://n8n.dbnet.com.vc/webhook-test/ideia-busca-informacoes',
   test_busca_todas_os : 'https://n8n.dbnet.com.vc/webhook-test/ideia-busca-todas-os',
   test_abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
+  test_historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
 
   token : 'Bearer 6a9d4bda75d5c9a7c60d4f3d22cdc5c39a83bd27f3b5399bb027834e524d6dd4',
 
@@ -78,6 +129,10 @@ const WEBHOOK = {
                  regiao_manutencao }
       → regiao_manutencao: [{ "em_manutencao_s_n": "S" | "N" }] — último array,
         depois das ordens de serviço. "S" mostra aviso 🛠️ no card Avisos.
+
+  [4] historico_potencia
+      Envia:   { "login_id": 101 }
+      Retorna: [{ "sinal_rx": "-22.59", "temperatura": "45.00", "data": "05/08/2026" }, ...]
 */
 
 // ══════════════════════════════════════════════════════
@@ -138,6 +193,15 @@ document.addEventListener('DOMContentLoaded', () => {
   setupBackButtons();
   setupModal();
   setupModalAtendimento();
+  setupModalPotencia();
+
+  // Botão de tema também na tela de busca
+  const slotTemaBusca = document.getElementById('search-theme-toggle-slot');
+  if (slotTemaBusca) {
+    slotTemaBusca.innerHTML = themeToggleButtonHtml('btn-theme-toggle-search');
+    bindThemeToggleButton(document.getElementById('btn-theme-toggle-search'));
+  }
+  atualizarTituloTema();
 
   // Exibe badge se estiver em modo teste
   if (TEST_MODE) {
@@ -492,15 +556,7 @@ function renderDashboard(cliente, contrato) {
         <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
-    <button class="btn-theme-toggle" id="btn-theme-toggle" title="Alternar tema claro/escuro">
-      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2"/>
-        <path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12h2.5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </button>
+    ${themeToggleButtonHtml()}
   `;
 
   document.getElementById('dashboard-grid').innerHTML = [
@@ -698,6 +754,16 @@ function cardGeral(cliente, c) {
 // ─── 2. ENDEREÇO ──────────────────────────────────────
 function cardEndereco(e) {
   if (!e) return '';
+
+  const partes = [];
+  if (e.rua)    partes.push(e.numero ? `${e.rua}, ${e.numero}` : e.rua);
+  if (e.bairro) partes.push(e.bairro);
+  if (e.cidade) partes.push(e.cidade);
+  const enderecoCompleto = partes.join(' - ');
+  const mapsUrl = enderecoCompleto
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompleto)}`
+    : '';
+
   return `
   <div class="card">
     <div class="card-header">
@@ -708,6 +774,9 @@ function cardEndereco(e) {
         </svg>
       </div>
       <span class="card-title">Endereço</span>
+      ${mapsUrl ? `<a href="${mapsUrl}" target="_blank" rel="noopener" class="btn-card-icon" title="Abrir no Google Maps">
+        ${iconMapPin()}
+      </a>` : ''}
     </div>
     ${fieldRow(iconPin(), 'Cidade',      esc(e.cidade  ||'—'))}
     ${fieldRow(iconPin(), 'Bairro',      esc(e.bairro  ||'—'))}
@@ -765,6 +834,9 @@ function cardAcesso(c) {
         ${iconLockSvg('#a78bfa')}
       </div>
       <span class="card-title" style="color:#a78bfa">Central do Assinante</span>
+      <button class="btn-card-icon" id="btn-copiar-acesso" title="Copiar login e senha" data-login="${esc(c.login||'')}" data-senha="${esc(c.senha||'')}">
+        ${iconCopy()}
+      </button>
     </div>
     <div class="login-field">
       <div>
@@ -799,6 +871,9 @@ function cardAcesso(c) {
         </svg>
       </div>
       <span class="card-title" style="color:#0070f3">PPPoE</span>
+      <button class="btn-card-icon" id="btn-copiar-pppoe" title="Copiar login e senha PPPoE" data-login="${esc(c.login_pppoe||'')}" data-senha="${esc(c.senha_pppoe||'')}">
+        ${iconCopy()}
+      </button>
     </div>
     <div class="login-field">
       <div>
@@ -944,6 +1019,10 @@ function cardFibraONU(f) {
         </svg>
       </div>
       <span class="card-title">Fibra / ONU</span>
+      ${semFibra ? '' : `
+      <button class="btn-card-icon" id="btn-onu-historico" title="Ver histórico de potência">
+        ${iconHistory()}
+      </button>`}
     </div>
     ${semFibra ? emptyCardState('Nenhuma ONU encontrada para este cliente') : `
     ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
@@ -1079,6 +1158,29 @@ function osRow(os) {
   </tr>`;
 }
 
+// Aceita vários formatos de resposta do n8n
+function normalizarHistoricoPotencia(raw) {
+  if (Array.isArray(raw)) {
+    if (raw[0]?.sinal_rx !== undefined) return raw;            // array de registros direto
+    if (Array.isArray(raw[0]?.dados))   return raw[0].dados;   // [{ dados: [...] }]
+    return [];
+  }
+  if (raw?.sinal_rx !== undefined) return [raw];               // objeto único direto
+  if (Array.isArray(raw?.dados))   return raw.dados;           // { dados: [...] }
+  return [];
+}
+
+function potenciaRow(p) {
+  const dbm = parseFloat(p.sinal_rx);
+  const cls = !isNaN(dbm) && dbm >= -26 ? 'pot-good' : 'pot-bad';
+  return `
+  <tr>
+    <td class="col-pot-date">${esc(p.data ?? '—')}</td>
+    <td class="col-pot-signal"><span class="${cls}">${esc(p.sinal_rx ?? '—')} dBm</span></td>
+    <td class="col-pot-temp">${esc(p.temperatura ?? '—')} °C</td>
+  </tr>`;
+}
+
 function osStatusClass(s) {
   return {
     'Finalizada':         'os-concluida',
@@ -1117,11 +1219,9 @@ function bindDashboardEvents(contrato) {
     });
   }
 
-  // Alternar tema claro/escuro
-  const btnTheme = document.getElementById('btn-theme-toggle');
-  if (btnTheme) {
-    btnTheme.addEventListener('click', alternarTema);
-  }
+  // Alternar tema (5 opções em sequência)
+  bindThemeToggleButton(document.getElementById('btn-theme-toggle'));
+  atualizarTituloTema();
 
   // Abrir atendimento — abre o modal de novo atendimento
   const btnAbrirAtendimento = document.getElementById('btn-abrir-atendimento');
@@ -1167,6 +1267,10 @@ function bindDashboardEvents(contrato) {
     });
   }
 
+  // Copiar login + senha — Central do Assinante e PPPoE
+  bindBotaoCopiarAcesso('btn-copiar-acesso');
+  bindBotaoCopiarAcesso('btn-copiar-pppoe');
+
   // Copiar PIX
   const btnPix = document.getElementById('btn-pix');
   if (btnPix) {
@@ -1181,6 +1285,35 @@ function bindDashboardEvents(contrato) {
       navigator.clipboard
         ? navigator.clipboard.writeText(code).then(copiar).catch(() => copiarFallback(code, copiar))
         : copiarFallback(code, copiar);
+    });
+  }
+
+  // Histórico de potência da ONU — chama webhook separado
+  const btnHistoricoPotencia = document.getElementById('btn-onu-historico');
+  if (btnHistoricoPotencia) {
+    btnHistoricoPotencia.addEventListener('click', async () => {
+      if (btnHistoricoPotencia.dataset.loading) return;
+      btnHistoricoPotencia.dataset.loading = '1';
+      setLoadingOverlay(true, 'Consultando histórico de potência...');
+
+      try {
+        const raw = await postWebhook(WEBHOOK.url('historico_potencia'), {
+          login_id: state.loginSelecionado?.login_id
+        });
+
+        potenciaHistoricoCompleto = normalizarHistoricoPotencia(raw);
+        potenciaPaginaAtual = 1;
+        renderPotenciaTabela();
+
+        document.getElementById('modal-potencia').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+      } catch (err) {
+        console.error('[historico_potencia]', err);
+        alert('Erro ao consultar o histórico de potência. Tente novamente.');
+      } finally {
+        delete btnHistoricoPotencia.dataset.loading;
+        setLoadingOverlay(false);
+      }
     });
   }
 
@@ -1226,6 +1359,30 @@ function bindDashboardEvents(contrato) {
   }
 }
 
+function bindBotaoCopiarAcesso(id) {
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const iconOriginal  = btn.innerHTML;
+  const tituloOriginal = btn.title;
+
+  btn.addEventListener('click', () => {
+    const texto = `Login: ${btn.dataset.login || '—'}\nSenha: ${btn.dataset.senha || '—'}`;
+    const copiar = () => {
+      btn.innerHTML = iconCheck();
+      btn.classList.add('copied');
+      btn.title = 'Copiado!';
+      setTimeout(() => {
+        btn.innerHTML = iconOriginal;
+        btn.classList.remove('copied');
+        btn.title = tituloOriginal;
+      }, 2000);
+    };
+    navigator.clipboard
+      ? navigator.clipboard.writeText(texto).then(copiar).catch(() => copiarFallback(texto, copiar))
+      : copiarFallback(texto, copiar);
+  });
+}
+
 function copiarFallback(text, cb) {
   const ta = document.createElement('textarea');
   ta.value = text;
@@ -1249,6 +1406,52 @@ function setupModal() {
 
 function closeModalOS() {
   document.getElementById('modal-os').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// ══════════════════════════════════════════════════════
+// MODAL HISTÓRICO DE POTÊNCIA
+// ══════════════════════════════════════════════════════
+const POTENCIA_POR_PAGINA = 15;
+let potenciaHistoricoCompleto = [];
+let potenciaPaginaAtual = 1;
+
+function setupModalPotencia() {
+  document.getElementById('modal-potencia-close').addEventListener('click', closeModalPotencia);
+  document.getElementById('modal-potencia').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeModalPotencia();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && document.getElementById('modal-potencia').style.display !== 'none') closeModalPotencia();
+  });
+
+  document.getElementById('pot-prev-page').addEventListener('click', () => {
+    if (potenciaPaginaAtual > 1) { potenciaPaginaAtual--; renderPotenciaTabela(); }
+  });
+  document.getElementById('pot-next-page').addEventListener('click', () => {
+    const totalPaginas = Math.max(1, Math.ceil(potenciaHistoricoCompleto.length / POTENCIA_POR_PAGINA));
+    if (potenciaPaginaAtual < totalPaginas) { potenciaPaginaAtual++; renderPotenciaTabela(); }
+  });
+}
+
+function renderPotenciaTabela() {
+  const total = potenciaHistoricoCompleto.length;
+  const totalPaginas = Math.max(1, Math.ceil(total / POTENCIA_POR_PAGINA));
+  const inicio = (potenciaPaginaAtual - 1) * POTENCIA_POR_PAGINA;
+  const pagina = potenciaHistoricoCompleto.slice(inicio, inicio + POTENCIA_POR_PAGINA);
+
+  document.getElementById('modal-potencia-tbody').innerHTML = pagina.length
+    ? pagina.map(potenciaRow).join('')
+    : '<tr><td colspan="3" class="col-pot-vazio">Nenhum histórico encontrado</td></tr>';
+
+  document.getElementById('pot-page-info').textContent = `Página ${potenciaPaginaAtual} de ${totalPaginas}`;
+  document.getElementById('pot-prev-page').disabled = potenciaPaginaAtual <= 1;
+  document.getElementById('pot-next-page').disabled = potenciaPaginaAtual >= totalPaginas;
+  document.getElementById('modal-potencia-pagination').classList.toggle('hidden', total <= POTENCIA_POR_PAGINA);
+}
+
+function closeModalPotencia() {
+  document.getElementById('modal-potencia').style.display = 'none';
   document.body.style.overflow = '';
 }
 
@@ -1935,6 +2138,12 @@ function iconPin() {
     <circle cx="12" cy="10" r="3" stroke="var(--text-muted)" stroke-width="1.8"/>
   </svg>`;
 }
+function iconMapPin() {
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" stroke="currentColor" stroke-width="1.8"/>
+    <circle cx="12" cy="10" r="3" stroke="currentColor" stroke-width="1.8"/>
+  </svg>`;
+}
 function iconPhone() {
   return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.17 12 19.79 19.79 0 0 1 1.11 3.4 2 2 0 0 1 3.09 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16l.92.92z" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round"/>
@@ -1977,6 +2186,24 @@ function iconHash() {
     <line x1="4" y1="15" x2="20" y2="15" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round"/>
     <line x1="10" y1="3" x2="8"  y2="21" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round"/>
     <line x1="16" y1="3" x2="14" y2="21" stroke="var(--text-muted)" stroke-width="1.8" stroke-linecap="round"/>
+  </svg>`;
+}
+function iconHistory() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+    <path d="M3 12a9 9 0 1 0 3-6.7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <polyline points="3 4 3 9 8 9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+function iconCopy() {
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+    <rect x="9" y="9" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.8"/>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.8"/>
+  </svg>`;
+}
+function iconCheck() {
+  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+    <polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
 function iconWallet(color) {

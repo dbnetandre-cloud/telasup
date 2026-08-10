@@ -44,31 +44,106 @@
   --transition: 0.2s cubic-bezier(0.4,0,0.2,1);
 }
 
-/* ─── TEMA CLARO ─────────────────────────────────────── */
+/* ─── TEMA CLARO (neutro, estilo painel admin) ──────── */
 html[data-theme="light"] {
-  --bg:           #dfeaf2;
-  --surface:      #eef6fb;
-  --surface-2:    #e1edf5;
-  --surface-3:    #d2e2ec;
-  --border:       rgba(20,60,90,0.10);
-  --border-hover: rgba(20,60,90,0.20);
+  --bg:           #f1f3f5;
+  --surface:      #ffffff;
+  --surface-2:    #f5f6f8;
+  --surface-3:    #e8eaed;
+  --border:       rgba(20,30,40,0.08);
+  --border-hover: rgba(20,30,40,0.16);
 
   --green-dim:    rgba(0,180,126,0.12);
   --blue-dim:     rgba(0,112,243,0.10);
   --red-dim:      rgba(244,63,94,0.10);
   --amber-dim:    rgba(245,158,11,0.12);
 
-  --text-primary:   #16232e;
-  --text-secondary: #4c5f70;
-  --text-muted:     #7e93a3;
+  --text-primary:   #1f2937;
+  --text-secondary: #5b6572;
+  --text-muted:     #8a94a1;
 
-  --tint: rgba(20,60,90,0.045);
-  --card-geral-grad: linear-gradient(135deg, #eef6fb 0%, #dbe9f4 100%);
+  --tint: rgba(20,30,40,0.035);
+  --card-geral-grad: linear-gradient(135deg, #ffffff 0%, #f3f5f7 100%);
 
-  --shadow-card: 0 4px 20px rgba(20,60,90,0.12), 0 1px 3px rgba(20,60,90,0.08);
-  --shadow-glow: 0 0 40px rgba(0,112,243,0.10);
+  --shadow-card: 0 2px 12px rgba(20,30,40,0.06), 0 1px 3px rgba(20,30,40,0.04);
+  --shadow-glow: 0 0 40px rgba(0,112,243,0.08);
 }
-html[data-theme="light"] .orb { opacity: 0.10; }
+html[data-theme="light"] .orb { opacity: 0.06; }
+
+/* ─── TEMA ESCURO SUAVE (charcoal neutro, estilo painel admin) ── */
+html[data-theme="dim"] {
+  --bg:           #171c22;
+  --surface:      #1e242b;
+  --surface-2:    #262d35;
+  --surface-3:    #2f3740;
+  --border:       rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.16);
+
+  --text-primary:   #e8ebee;
+  --text-secondary: #9aa3ab;
+  --text-muted:     #66707a;
+
+  --tint: rgba(255,255,255,0.035);
+  --card-geral-grad: linear-gradient(135deg, #1e242b 0%, #171c22 100%);
+
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.25);
+  --shadow-glow: 0 0 40px rgba(255,255,255,0.06);
+}
+html[data-theme="dim"] .orb { opacity: 0.08; }
+
+/* ─── TEMA CLARO SÉPIA (mais aconchegante, menos luz azul) ───── */
+html[data-theme="sepia"] {
+  --bg:           #f1e9d8;
+  --surface:      #f6efdf;
+  --surface-2:    #eee4cd;
+  --surface-3:    #e5d8b9;
+  --border:       rgba(90,70,40,0.12);
+  --border-hover: rgba(90,70,40,0.22);
+
+  --green-dim:    rgba(0,180,126,0.12);
+  --blue-dim:     rgba(0,112,243,0.10);
+  --red-dim:      rgba(244,63,94,0.10);
+  --amber-dim:    rgba(245,158,11,0.14);
+
+  --text-primary:   #3b2f22;
+  --text-secondary: #6e5f47;
+  --text-muted:     #9c8f76;
+
+  --tint: rgba(90,70,40,0.05);
+  --card-geral-grad: linear-gradient(135deg, #f6efdf 0%, #eddfbd 100%);
+
+  --shadow-card: 0 4px 20px rgba(90,70,40,0.14), 0 1px 3px rgba(90,70,40,0.09);
+  --shadow-glow: 0 0 40px rgba(0,112,243,0.08);
+}
+html[data-theme="sepia"] .orb { opacity: 0.07; }
+
+/* ─── TEMA VERDE (paleta EDF1D6 / 9DC08B / 609966 / 40513B) ──── */
+html[data-theme="green"] {
+  --bg:           #edf1d6;
+  --surface:      #f5f8ea;
+  --surface-2:    #e7edd3;
+  --surface-3:    #d7e2bb;
+  --border:       rgba(64,81,59,0.14);
+  --border-hover: rgba(64,81,59,0.26);
+
+  --green:        #609966;
+  --green-dim:    rgba(96,153,102,0.16);
+  --green-glow:   rgba(96,153,102,0.35);
+  --blue-dim:     rgba(0,112,243,0.10);
+  --red-dim:      rgba(244,63,94,0.10);
+  --amber-dim:    rgba(245,158,11,0.14);
+
+  --text-primary:   #40513b;
+  --text-secondary: #5c6f52;
+  --text-muted:     #85957a;
+
+  --tint: rgba(64,81,59,0.045);
+  --card-geral-grad: linear-gradient(135deg, #f5f8ea 0%, #e1eac8 100%);
+
+  --shadow-card: 0 4px 20px rgba(64,81,59,0.14), 0 1px 3px rgba(64,81,59,0.09);
+  --shadow-glow: 0 0 40px rgba(96,153,102,0.18);
+}
+html[data-theme="green"] .orb { opacity: 0.08; }
 
 html { font-size: 16px; scroll-behavior: smooth; }
 
@@ -137,6 +212,13 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 #screen-search.active { display: flex; }
+
+.search-theme-toggle-slot {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 3;
+}
 
 .search-hero {
   position: relative;
@@ -612,12 +694,21 @@ a { color: inherit; text-decoration: none; }
   background: var(--surface-2);
 }
 .btn-theme-toggle svg {
+  display: none;
   transition: transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.2s ease;
 }
-.btn-theme-toggle .icon-moon { display: none; }
-html[data-theme="light"] .btn-theme-toggle .icon-sun  { display: none; }
-html[data-theme="light"] .btn-theme-toggle .icon-moon { display: inline-flex; }
 .btn-theme-toggle:hover svg { transform: rotate(20deg) scale(1.1); }
+
+/* Ícone exibido = tema ativo no momento (dark é o padrão, sem atributo) */
+.btn-theme-toggle .icon-moon  { display: inline-flex; }
+html[data-theme="light"] .btn-theme-toggle .icon-sun    { display: inline-flex; }
+html[data-theme="light"] .btn-theme-toggle .icon-moon   { display: none; }
+html[data-theme="dim"]   .btn-theme-toggle .icon-dim    { display: inline-flex; }
+html[data-theme="dim"]   .btn-theme-toggle .icon-moon   { display: none; }
+html[data-theme="sepia"] .btn-theme-toggle .icon-sepia  { display: inline-flex; }
+html[data-theme="sepia"] .btn-theme-toggle .icon-moon   { display: none; }
+html[data-theme="green"] .btn-theme-toggle .icon-leaf   { display: inline-flex; }
+html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
 
 /* Grid */
 .dashboard-grid {
@@ -672,6 +763,33 @@ html[data-theme="light"] .btn-theme-toggle .icon-moon { display: inline-flex; }
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-secondary);
+}
+
+/* Botão de ação pequeno no card-header (histórico, copiar, etc.) */
+.btn-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: all var(--transition);
+  cursor: pointer;
+}
+.btn-card-icon:hover {
+  color: var(--blue);
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+.btn-card-icon.copied {
+  color: var(--green);
+  border-color: rgba(0,229,160,0.3);
+  background: var(--green-dim);
 }
 
 .card-divider {
@@ -1122,6 +1240,41 @@ html[data-theme="light"] .btn-theme-toggle .icon-moon { display: inline-flex; }
 .os-table .col-setor  { width: 10%; color: var(--text-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .os-table .col-status { width: 10%; }
 .os-table .col-desc   { width: 48%; color: var(--text-secondary); }
+.os-table .col-pot-date   { width: 34%; color: var(--text-secondary); white-space: nowrap; }
+.os-table .col-pot-signal { width: 33%; font-family: monospace; }
+.os-table .col-pot-temp   { width: 33%; color: var(--text-secondary); font-family: monospace; }
+.col-pot-vazio { text-align: center; color: var(--text-muted); padding: 20px !important; }
+.pot-good { color: var(--green); font-weight: 600; }
+.pot-bad  { color: var(--red);   font-weight: 600; }
+
+.modal-potencia-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+}
+.modal-potencia-pagination.hidden { display: none; }
+.btn-pot-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-pot-page:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+.btn-pot-page:disabled { opacity: 0.4; cursor: default; }
+.pot-page-info { font-size: 13px; color: var(--text-muted); min-width: 100px; text-align: center; }
 
 /* ── Linhas Móveis (MVNO) ── */
 .mvno-list   { display: flex; flex-direction: column; gap: 12px; }
@@ -1221,6 +1374,7 @@ html[data-theme="light"] .btn-theme-toggle .icon-moon { display: inline-flex; }
 
 /* ── Modal Abrir Atendimento ── */
 .modal-atendimento-box { max-width: 480px; }
+.modal-potencia-box    { max-width: 480px; }
 
 .form-atendimento { display: flex; flex-direction: column; gap: 16px; padding-top: 4px; }
 .form-field { display: flex; flex-direction: column; gap: 6px; }

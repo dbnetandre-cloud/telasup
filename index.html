@@ -18,6 +18,7 @@
        TELA 1 — BUSCA
   ══════════════════════════════════════════ -->
   <section id="screen-search" class="screen active">
+    <div class="search-theme-toggle-slot" id="search-theme-toggle-slot"></div>
     <div class="search-hero">
       <div class="logo">
         <div class="logo-mark">
@@ -161,6 +162,45 @@
           </thead>
           <tbody id="modal-os-tbody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MODAL — HISTÓRICO DE POTÊNCIA DA ONU
+  ══════════════════════════════════════════ -->
+  <div id="modal-potencia" class="modal-os-overlay" style="display:none">
+    <div class="modal-os-box modal-potencia-box">
+      <div class="modal-os-header">
+        <span class="modal-os-title">Histórico de Potência</span>
+        <button class="modal-os-close" id="modal-potencia-close" aria-label="Fechar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-os-body">
+        <table class="os-table">
+          <thead>
+            <tr>
+              <th class="col-pot-date">Data</th><th class="col-pot-signal">Sinal RX</th><th class="col-pot-temp">Temperatura</th>
+            </tr>
+          </thead>
+          <tbody id="modal-potencia-tbody"></tbody>
+        </table>
+        <div id="modal-potencia-pagination" class="modal-potencia-pagination hidden">
+          <button type="button" class="btn-pot-page" id="pot-prev-page" aria-label="Página anterior">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <span id="pot-page-info" class="pot-page-info">Página 1 de 1</span>
+          <button type="button" class="btn-pot-page" id="pot-next-page" aria-label="Próxima página">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
