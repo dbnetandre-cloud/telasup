@@ -1408,6 +1408,18 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
 .form-error.success { color: var(--green); }
 .form-error.hidden { display: none; }
 
+.form-warning {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--red-dim);
+  border: 1px solid rgba(244,63,94,0.3);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+}
+.form-warning.hidden { display: none; }
+
 .btn-enviar-atendimento {
   display: inline-flex;
   align-items: center;

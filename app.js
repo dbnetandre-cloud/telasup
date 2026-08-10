@@ -1229,6 +1229,7 @@ function bindDashboardEvents(contrato) {
     btnAbrirAtendimento.addEventListener('click', () => {
       document.getElementById('form-atendimento').reset();
       document.getElementById('atendimento-descricao').style.height = '';
+      document.getElementById('atendimento-aviso-330').classList.add('hidden');
       const erroEl = document.getElementById('atendimento-erro');
       erroEl.classList.add('hidden');
       erroEl.classList.remove('success');
@@ -1481,6 +1482,7 @@ function setupModalAtendimento() {
   document.getElementById('atendimento-assunto').addEventListener('change', (e) => {
     descricaoEl.value = ASSUNTO_TEMPLATES[e.target.value] || '';
     autoResizeTextarea(descricaoEl);
+    document.getElementById('atendimento-aviso-330').classList.toggle('hidden', e.target.value !== '330');
   });
 
   // Ajusta a altura automaticamente conforme o texto digitado
