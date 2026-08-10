@@ -102,8 +102,7 @@ const WEBHOOK = {
   busca_logins   : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-logins',
   busca_info     : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-informacoes',
   busca_todas_os : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-todas-os',
-  // TODO: trocar para o webhook de produção quando estiver pronto
-  abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
+  abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook/telasup-abrir-atendimento',
   historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
   pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
 
@@ -1296,10 +1295,10 @@ function bindDashboardEvents(contrato) {
   // Alternar tema (5 opções em sequência)
   const menuItemTheme = document.getElementById('menu-item-theme');
   if (menuItemTheme) {
-    menuItemTheme.addEventListener('click', () => {
+    menuItemTheme.addEventListener('click', (e) => {
+      e.stopPropagation();
       alternarTema();
       atualizarTituloTema();
-      closeHeaderMenu();
     });
   }
   atualizarTituloTema();
