@@ -1,0 +1,280 @@
+{
+  "clientes": [
+    {
+      "id": 1,
+      "nome": "João Carlos Silva Santos",
+      "cpf": "123.456.789-00",
+      "contatos": {
+        "telefones": ["(11) 99999-1111", "(11) 98888-2222", "(11) 97777-3333", "(11) 96666-4444"],
+        "email": "joao.santos@gmail.com"
+      },
+      "contratos": [
+        {
+          "id": 101,
+          "endereco": {
+            "cidade": "São Paulo",
+            "bairro": "Vila Madalena",
+            "rua": "Rua Harmonia",
+            "numero": "123"
+          },
+          "login": "joao.santos.vm",
+          "senha": "Fibra@2024!",
+          "plano": "Fibra 500MB",
+          "ip_roteador": "177.52.30.142",
+          "status_conexao": "online",
+          "status_acesso": "Ativo",
+          "quedas": 2,
+          "comodatos": [
+            "Roteador TP-Link AX3000",
+            "ONT Huawei HG8145V5",
+            "Cabo Drop Autossustentado 50m"
+          ],
+          "produtos_contratados": ["Paramount+", "HBO Max", "Deezer Premium"],
+          "telefonia": {
+            "tipo": "Móvel",
+            "numero": "(11) 98765-4321",
+            "iccid": "89550534180062345678",
+            "plano": "Combo 15GB + Ligações Ilimitadas"
+          },
+          "fibra_onu": {
+            "transmissor": "OLT Huawei MA5800-X7",
+            "pon_id": "0/1/3",
+            "mac": "48:57:DD:AA:BB:CC",
+            "vlan": "200",
+            "ultima_potencia": -18.5
+          },
+          "financeiro": {
+            "boleto_aberto": {
+              "vencimento": "2026-05-15",
+              "valor": 129.90,
+              "link_boleto": "#",
+              "codigo_pix": "00020126580014BR.GOV.BCB.PIX0136a3cf9b30-a8e1-4c22-9f74-b1d2c3e4f5a6520400005303986540610.005802BR5913PROVEDOR ISP6008SAO PAULO62070503***6304ABCD"
+            }
+          },
+          "ordens_servico": [
+            {"id": "OS-2026-001", "data": "2026-04-02", "tipo": "Suporte Técnico",    "status": "Concluída",      "descricao": "Lentidão na conexão — substituição de cabo drop"},
+            {"id": "OS-2026-002", "data": "2026-04-08", "tipo": "Mudança de Endereço","status": "Cancelada",      "descricao": "Solicitação cancelada pelo próprio cliente"},
+            {"id": "OS-2026-003", "data": "2026-04-15", "tipo": "Suporte Técnico",    "status": "Concluída",      "descricao": "Roteador sem LED — reinicialização remota resolveu"},
+            {"id": "OS-2026-004", "data": "2026-04-18", "tipo": "Instalação Produto", "status": "Concluída",      "descricao": "Ativação do Paramount+ e Deezer Premium"},
+            {"id": "OS-2026-005", "data": "2026-04-22", "tipo": "Cobrança",           "status": "Em Andamento",   "descricao": "Negociação de débito em aberto — aguarda retorno"},
+            {"id": "OS-2026-006", "data": "2026-04-25", "tipo": "Suporte Técnico",    "status": "Concluída",      "descricao": "Sem sinal de fibra — reparo na caixa externa CTO-07"},
+            {"id": "OS-2026-007", "data": "2026-04-28", "tipo": "Upgrade de Plano",   "status": "Concluída",      "descricao": "Upgrade de Fibra 300MB para Fibra 500MB"},
+            {"id": "OS-2026-008", "data": "2026-05-02", "tipo": "Suporte Técnico",    "status": "Em Andamento",   "descricao": "Queda intermitente reportada — análise em campo"},
+            {"id": "OS-2026-009", "data": "2026-05-05", "tipo": "Visita Técnica",     "status": "Agendada",       "descricao": "Verificação de potência ONU — agendado p/ 07/05"},
+            {"id": "OS-2026-010", "data": "2026-05-08", "tipo": "Cobrança",           "status": "Concluída",      "descricao": "Atualização de dados bancários para débito automático"},
+            {"id": "OS-2026-011", "data": "2026-05-10", "tipo": "Suporte Técnico",    "status": "Aguardando",     "descricao": "Solicitação de troca de roteador — aguarda estoque"},
+            {"id": "OS-2026-012", "data": "2026-05-14", "tipo": "Retenção",           "status": "Em Andamento",   "descricao": "Análise de cancelamento — retenção ativa pela equipe comercial"}
+          ],
+          "crm": {
+            "segmento": "Residencial",
+            "canal_venda": "Indicação",
+            "responsavel": "Carlos Mendes",
+            "indicado_por": "Maria Oliveira"
+          }
+        },
+        {
+          "id": 102,
+          "endereco": {
+            "cidade": "São Paulo",
+            "bairro": "Pinheiros",
+            "rua": "Alameda dos Pinheiros",
+            "numero": "850, Apto 42"
+          },
+          "login": "joao.santos.pin",
+          "senha": "Casa2@2025",
+          "plano": "Fibra 1GB",
+          "ip_roteador": "187.65.44.21",
+          "status_conexao": "offline",
+          "status_acesso": "Bloqueado",
+          "quedas": 7,
+          "comodatos": [
+            "Roteador Xiaomi AX6000",
+            "ONT Intelbras 121 AC",
+            "Cabo Drop Autossustentado 80m",
+            "Switch 8 Portas TP-Link"
+          ],
+          "produtos_contratados": ["Globoplay", "Disney+"],
+          "telefonia": {
+            "tipo": "Fixa",
+            "numero": "(11) 3456-7890",
+            "iccid": "—",
+            "plano": "Básico — Ligações Locais"
+          },
+          "fibra_onu": {
+            "transmissor": "OLT ZTE C320",
+            "pon_id": "1/2/7",
+            "mac": "AC:1F:6B:33:44:55",
+            "vlan": "150",
+            "ultima_potencia": -28.3
+          },
+          "financeiro": {
+            "boleto_aberto": null
+          },
+          "ordens_servico": [
+            {"id": "OS-PIN-001", "data": "2026-04-05", "tipo": "Instalação",          "status": "Concluída",    "descricao": "Instalação inicial fibra residencial — Pinheiros"},
+            {"id": "OS-PIN-002", "data": "2026-05-01", "tipo": "Bloqueio Financeiro", "status": "Concluída",    "descricao": "Bloqueio automático por inadimplência — fatura vencida 30d"},
+            {"id": "OS-PIN-003", "data": "2026-05-20", "tipo": "Suporte Técnico",     "status": "Aguardando",   "descricao": "Desbloqueio solicitado após comprovante de pagamento enviado"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "nome": "Maria Fernanda Costa Oliveira",
+      "cpf": "987.654.321-00",
+      "contatos": {
+        "telefones": ["(85) 99111-2233", "(85) 98222-3344", "(85) 97333-4455", "(85) 96444-5566"],
+        "email": "mariafernanda.oliveira@empresa.com.br"
+      },
+      "contratos": [
+        {
+          "id": 201,
+          "endereco": {
+            "cidade": "Fortaleza",
+            "bairro": "Meireles",
+            "rua": "Avenida Beira Mar",
+            "numero": "2500, Sala 301"
+          },
+          "login": "maria.empresarial",
+          "senha": "Empresa#2025!",
+          "plano": "Fibra Empresarial 1GB Simétrico",
+          "ip_roteador": "200.10.50.33",
+          "status_conexao": "online",
+          "status_acesso": "Ativo",
+          "quedas": 0,
+          "comodatos": [
+            "Roteador Mikrotik hEX S RB760iGS",
+            "ONT Huawei EG8247H",
+            "Switch Gerenciável 24 Portas Cisco SG350",
+            "No-break APC Smart-UPS 1500VA"
+          ],
+          "produtos_contratados": ["IP Fixo Dedicado /29", "SLA 4 horas", "Monitoramento 24/7", "Gerência Remota de Rede"],
+          "telefonia": {
+            "tipo": "Fixa",
+            "numero": "(85) 3000-4444",
+            "iccid": "—",
+            "plano": "Corporativo — Ramais PABX Ilimitados"
+          },
+          "fibra_onu": {
+            "transmissor": "OLT Huawei MA5800-X15",
+            "pon_id": "0/3/1",
+            "mac": "F4:8E:38:CC:DD:EE",
+            "vlan": "300",
+            "ultima_potencia": -14.2
+          },
+          "financeiro": {
+            "boleto_aberto": {
+              "vencimento": "2026-06-05",
+              "valor": 899.00,
+              "link_boleto": "#",
+              "codigo_pix": "00020126580014BR.GOV.BCB.PIX0136b7cf9b30-c8e1-4d22-8f74-a2d3c4e5f6b7520400005303986540699.005802BR5914PROVEDOR ISP6008FORTALEZA62070503***6304DCBA"
+            }
+          },
+          "ordens_servico": [
+            {"id": "OS-MFO-001", "data": "2026-03-10", "tipo": "Instalação Empresarial","status": "Concluída",  "descricao": "Instalação completa — rack, patch panel e configuração de rede"},
+            {"id": "OS-MFO-002", "data": "2026-04-01", "tipo": "Configuração",          "status": "Concluída",  "descricao": "Configuração de QoS para priorização de videoconferência"},
+            {"id": "OS-MFO-003", "data": "2026-05-15", "tipo": "Manutenção Preventiva", "status": "Agendada",   "descricao": "Revisão geral do ambiente de rede — agendado p/ 18/05"}
+          ]
+        },
+        {
+          "id": 202,
+          "endereco": {
+            "cidade": "Fortaleza",
+            "bairro": "Meireles",
+            "rua": "Avenida Beira Mar",
+            "numero": "2500, Sala 301"
+          },
+          "login": "maria.backup",
+          "senha": "LinkBkp#2025",
+          "plano": "Fibra Empresarial 500MB (Link Backup)",
+          "ip_roteador": "200.10.50.34",
+          "status_conexao": "online",
+          "status_acesso": "Aguardando Assinatura",
+          "quedas": 0,
+          "comodatos": [
+            "Roteador Mikrotik RB2011UiAS",
+            "ONT Huawei EG8247H (Backup)"
+          ],
+          "produtos_contratados": ["IP Fixo Dedicado /30", "SLA 8 horas"],
+          "telefonia": {
+            "tipo": "Móvel",
+            "numero": "(85) 99000-1234",
+            "iccid": "89550512345678901234",
+            "plano": "Dados Corporativos 50GB"
+          },
+          "fibra_onu": {
+            "transmissor": "OLT Huawei MA5800-X15",
+            "pon_id": "0/3/2",
+            "mac": "F4:8E:38:CC:DD:FF",
+            "vlan": "301",
+            "ultima_potencia": -21.8
+          },
+          "financeiro": {
+            "boleto_aberto": null
+          },
+          "ordens_servico": [
+            {"id": "OS-BCK-001", "data": "2026-03-12", "tipo": "Instalação Link Backup","status": "Concluída",  "descricao": "Instalação e configuração do link de contingência"},
+            {"id": "OS-BCK-002", "data": "2026-05-10", "tipo": "Teste de Failover",     "status": "Concluída",  "descricao": "Teste programado de failover — switching em < 3s, aprovado"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "nome": "Carlos Eduardo Mendes Barbosa",
+      "cpf": "456.789.123-55",
+      "contatos": {
+        "telefones": ["(31) 99500-1122", "(31) 98600-2233", "(31) 97700-3344", "(31) 96800-4455"],
+        "email": "carlos.barbosa@hotmail.com"
+      },
+      "contratos": [
+        {
+          "id": 301,
+          "endereco": {
+            "cidade": "Belo Horizonte",
+            "bairro": "Savassi",
+            "rua": "Rua Pernambuco",
+            "numero": "1200, Apto 5"
+          },
+          "login": "carlos.barbosa",
+          "senha": "Sav@ssa2025",
+          "plano": "Fibra 300MB",
+          "ip_roteador": "189.44.62.178",
+          "status_conexao": "online",
+          "status_acesso": "Ativo",
+          "quedas": 1,
+          "comodatos": [
+            "Roteador Intelbras Action RF1200",
+            "ONT Intelbras 110B"
+          ],
+          "produtos_contratados": ["Netflix Standard", "Spotify Família"],
+          "telefonia": {
+            "tipo": "Móvel",
+            "numero": "(31) 99500-1122",
+            "iccid": "89550598765432109876",
+            "plano": "Combo 20GB"
+          },
+          "fibra_onu": {
+            "transmissor": "OLT Datacom DM4612",
+            "pon_id": "0/2/5",
+            "mac": "C0:FF:EE:11:22:33",
+            "vlan": "400",
+            "ultima_potencia": -22.1
+          },
+          "financeiro": {
+            "boleto_aberto": {
+              "vencimento": "2026-06-10",
+              "valor": 89.90,
+              "link_boleto": "#",
+              "codigo_pix": "00020126580014BR.GOV.BCB.PIX0136c9df0c41-b9f2-5e33-0g85-c3e4d5f6g7c8520400005303986540589.905802BR5913PROVEDOR ISP6008BELO HOR62070503***6304EFAB"
+            }
+          },
+          "ordens_servico": [
+            {"id": "OS-CEB-001", "data": "2026-05-20", "tipo": "Instalação",       "status": "Concluída",    "descricao": "Instalação residencial — fibra e roteador configurados"},
+            {"id": "OS-CEB-002", "data": "2026-05-28", "tipo": "Suporte Técnico",  "status": "Concluída",    "descricao": "Wi-Fi com baixo alcance — ajuste de canal e potência"}
+          ]
+        }
+      ]
+    }
+  ]
+}
