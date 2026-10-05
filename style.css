@@ -901,6 +901,15 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   letter-spacing: 0.5px;
 }
 
+/* Online/Offline em destaque no canto superior direito do card */
+.geral-conn { margin-left: auto; position: relative; z-index: 1; }
+.geral-conn .badge {
+  font-size: 15px;
+  padding: 7px 16px;
+  gap: 8px;
+}
+.geral-conn .badge-dot { width: 9px; height: 9px; }
+
 .geral-badges {
   display: flex;
   flex-wrap: wrap;
@@ -1096,9 +1105,9 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   padding: 12px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid;
-  margin-top: 14px;
+  margin-bottom: 14px;
 }
-.signal-good   { background: rgba(0,229,160,0.06);  border-color: rgba(0,229,160,0.2);  }
+.signal-good  { background: rgba(0,229,160,0.06);  border-color: rgba(0,229,160,0.2);  }
 .signal-warn   { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.2); }
 .signal-bad    { background: rgba(244,63,94,0.06);  border-color: rgba(244,63,94,0.2);  }
 
@@ -1260,6 +1269,44 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   background: var(--amber-dim);
   border-color: rgba(245,158,11,0.25);
   color: var(--amber);
+}
+
+/* ─── CARD AVISOS (span 2) + contador Suporte N1 ──────── */
+.card-avisos { grid-column: span 2; }
+.avisos-layout {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+  flex: 1;
+}
+.avisos-lista { flex: 1; min-width: 0; }
+.os-n1-box {
+  flex: 0 0 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 4px;
+  padding: 14px 12px;
+  background: var(--amber-dim);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: var(--radius-md);
+}
+.os-n1-count {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--amber);
+}
+.os-n1-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.os-n1-periodo {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 /* ─── CARD OS ─────────────────────────────────────────── */
@@ -1602,6 +1649,9 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .page-container { padding: 20px 16px 48px; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .card-geral     { grid-column: span 1; }
+  .card-avisos    { grid-column: span 1; }
+  .avisos-layout  { flex-direction: column-reverse; }
+  .os-n1-box      { flex: none; }
   .card-os        { grid-column: span 1; }
   .geral-grid     { grid-template-columns: 1fr 1fr; }
   .boleto-actions { flex-direction: column; }

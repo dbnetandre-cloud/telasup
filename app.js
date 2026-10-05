@@ -102,6 +102,7 @@ const WEBHOOK = {
   busca_logins   : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-logins',
   busca_info     : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-informacoes',
   busca_todas_os : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-todas-os',
+  // TODO: trocar para o webhook de produção quando estiver pronto
   abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook/telasup-abrir-atendimento',
   historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
   pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
@@ -589,7 +590,6 @@ function renderDashboard(cliente, contrato) {
   document.getElementById('dashboard-grid').innerHTML = [
     cardGeral(cliente, contrato),
     cardAvisos(contrato),
-    cardEndereco(contrato.endereco),
     cardFibraONU(contrato.fibra_onu || {}),
     cardComodatos(contrato.comodatos || []),
     cardAcesso(contrato),
@@ -597,12 +597,56 @@ function renderDashboard(cliente, contrato) {
     cardTelefonia(contrato.telefonia || {}),
     cardMVNO(contrato.linhas_mvno || []),
     cardContatos(contrato.contatos || (cliente && cliente.contatos) || {}),
+    cardEndereco(contrato.endereco),
     cardFinanceiro(contrato.financeiro || {}),
     cardOS(contrato.ordens_servico || [])
   ].join('');
 
   showScreen('screen-dashboard');
   bindDashboardEvents(contrato);
+  atualizarContadorSuporteN1();
+}
+
+// ─── CONTADOR DE OS — SUPORTE N1 (últimos 3 meses) ────
+const ASSUNTO_SUPORTE_N1 = '[suporte n1]';
+const MESES_CONTADOR_SUPORTE_N1 = 3;
+
+// Recebe lista de { data, assunto } e conta as OS de Suporte N1 abertas
+// nos últimos 3 meses. A data vem como "YYYY-MM-DD HH:MM:SS".
+function contarSuporteN1(lista) {
+  const limite = new Date();
+  limite.setMonth(limite.getMonth() - MESES_CONTADOR_SUPORTE_N1);
+  return (lista || []).filter(o => {
+    if (!String(o.assunto || '').toLowerCase().includes(ASSUNTO_SUPORTE_N1)) return false;
+    const aberta = new Date(String(o.data || '').replace(' ', 'T'));
+    return !isNaN(aberta) && aberta >= limite;
+  }).length;
+}
+
+function setContadorSuporteN1(qtd) {
+  const el = document.getElementById('os-n1-count');
+  if (el) el.textContent = qtd;
+}
+
+// O dashboard só traz as OS mais recentes; busca a lista completa em segundo
+// plano para o número do card ficar certo. Enquanto isso, mostra a contagem local.
+async function atualizarContadorSuporteN1() {
+  const loginId = state.loginSelecionado?.login_id;
+  try {
+    const raw = await postWebhook(WEBHOOK.url('busca_todas_os'), {
+      login_id:   loginId,
+      cliente_id: state.clienteSelecionado?.cliente_id
+    });
+    if (state.loginSelecionado?.login_id !== loginId) return; // trocou de cliente
+    const bloco = Array.isArray(raw) ? (raw[0] || {}) : raw;
+    const osRaw = bloco['ordem_de_serviço'] || bloco.ordens_servico || [];
+    setContadorSuporteN1(contarSuporteN1(osRaw.map(o => ({
+      data:    o.data_abertura_ordem || '',
+      assunto: o.assunto_ordem       || '',
+    }))));
+  } catch (err) {
+    console.error('[contador suporte N1]', err);
+  }
 }
 
 // ─── 1B. AVISOS ───────────────────────────────────────
@@ -676,8 +720,10 @@ function cardAvisos(c) {
         Nenhum aviso no momento
       </div>`;
 
+  const qtdN1 = contarSuporteN1(c.ordens_servico);
+
   return `
-  <div class="card">
+  <div class="card card-avisos">
     <div class="card-header">
       <div class="card-icon" style="background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.2)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -687,7 +733,14 @@ function cardAvisos(c) {
       <span class="card-title">Avisos</span>
       ${avisos.length ? `<span class="badge badge-bloqueado" style="margin-left:auto">${avisos.length}</span>` : ''}
     </div>
-    ${body}
+    <div class="avisos-layout">
+      <div class="avisos-lista">${body}</div>
+      <div class="os-n1-box" title="OS com o assunto Suporte N1 abertas nos últimos 3 meses">
+        <div class="os-n1-count" id="os-n1-count">${qtdN1}</div>
+        <div class="os-n1-label">OS de Suporte N1</div>
+        <div class="os-n1-periodo">últimos 3 meses</div>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -739,6 +792,7 @@ function cardGeral(cliente, c) {
         </svg>
       </div>
       <span class="card-title">Dados Gerais</span>
+      <span class="geral-conn">${connBadge}</span>
     </div>
     <div class="geral-main">
       <div class="geral-avatar">${initials}</div>
@@ -747,7 +801,7 @@ function cardGeral(cliente, c) {
         <div class="geral-cpf">CPF: ${cpf}</div>
       </div>
     </div>
-    <div class="geral-badges">${connBadge}${accessBadge}${planBadge}</div>
+    <div class="geral-badges">${accessBadge}${planBadge}</div>
     <div class="geral-grid">
       <div class="geral-field">
         <span class="geral-field-label">IP do Roteador</span>
@@ -1052,10 +1106,6 @@ function cardFibraONU(f) {
       </button>`}
     </div>
     ${semFibra ? emptyCardState('Nenhuma ONU encontrada para este cliente') : `
-    ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
-    ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
-    ${fieldRow(iconHash(),   'MAC',         `<span class="mono">${esc(f.mac||'—')}</span>`)}
-    ${fieldRow(iconHash(),   'VLAN',        `<span class="mono">${esc(f.vlan||'—')}</span>`)}
     <div class="signal-bar ${sigClass}">
       <span class="signal-icon">${sigIcon}</span>
       <div>
@@ -1064,6 +1114,10 @@ function cardFibraONU(f) {
       </div>
       <span class="signal-qual">${sigLabel}</span>
     </div>
+    ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
+    ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
+    ${fieldRow(iconHash(),   'MAC',         `<span class="mono">${esc(f.mac||'—')}</span>`)}
+    ${fieldRow(iconHash(),   'VLAN',        `<span class="mono">${esc(f.vlan||'—')}</span>`)}
     `}
   </div>`;
 }
