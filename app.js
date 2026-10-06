@@ -109,6 +109,7 @@ const WEBHOOK = {
   // Ações do card Dados Gerais (enquanto a URL estiver vazia, o botão avisa que não está configurado)
   limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
   desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
+  reiniciar_onu : 'https://n8n.dbnet.com.vc/webhook/reiniciar-onu',   // { id_onu, login_id, cliente_id }
   potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',   // { id_onu, login_id, cliente_id } → [{ data: "<html do IXC>" }] (só Sinal Rx/Tx, Temperatura e Voltagem são lidos)
   status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',   // leve: { login_id, cliente_id } → { online: 'S'|'N', ip } (vazio = Recarregar refaz tudo)
 
@@ -122,6 +123,7 @@ const WEBHOOK = {
   test_pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
   test_limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
   test_desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
+  test_reiniciar_onu : 'https://n8n.dbnet.com.vc/webhook/reiniciar-onu',
   test_potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',
   test_status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',
 
@@ -617,34 +619,43 @@ function renderDashboard(cliente, contrato) {
 
   showScreen('screen-dashboard');
   bindDashboardEvents(contrato);
-  atualizarContadorSuporteN1();
+  atualizarContadoresOs();
   consultarPotenciaAtual(true); // ao abrir o dashboard já puxa o estado atual da ONU
 }
 
-// ─── CONTADOR DE OS — SUPORTE N1 (últimos 3 meses) ────
-const ASSUNTO_SUPORTE_N1 = '[suporte n1]';
-const MESES_CONTADOR_SUPORTE_N1 = 3;
+// ─── CONTADORES DE OS NO CARD AVISOS (últimos 3 meses) ────
+// Para contar outro assunto basta incluir um item aqui. `marcador` é um trecho do
+// assunto (sem acento, minúsculo) que o identifica.
+const CONTADORES_OS = [
+  { id: 'n1',       marcador: '[suporte n1]', label: 'OS de Suporte N1' },
+  { id: 'retencao', marcador: '[retencao]',   label: 'OS de Retenção'   },
+];
+const MESES_CONTADOR_OS = 3;
 
-// Recebe lista de { data, assunto } e conta as OS de Suporte N1 abertas
-// nos últimos 3 meses. A data vem como "YYYY-MM-DD HH:MM:SS".
-function contarSuporteN1(lista) {
+const semAcento = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// Recebe lista de { data, assunto } e conta as OS do assunto abertas nos
+// últimos 3 meses. A data vem como "YYYY-MM-DD HH:MM:SS".
+function contarOsPorAssunto(lista, marcador) {
   const limite = new Date();
-  limite.setMonth(limite.getMonth() - MESES_CONTADOR_SUPORTE_N1);
+  limite.setMonth(limite.getMonth() - MESES_CONTADOR_OS);
   return (lista || []).filter(o => {
-    if (!String(o.assunto || '').toLowerCase().includes(ASSUNTO_SUPORTE_N1)) return false;
+    if (!semAcento(o.assunto).includes(marcador)) return false;
     const aberta = new Date(String(o.data || '').replace(' ', 'T'));
     return !isNaN(aberta) && aberta >= limite;
   }).length;
 }
 
-function setContadorSuporteN1(qtd) {
-  const el = document.getElementById('os-n1-count');
-  if (el) el.textContent = qtd;
+function setContadoresOs(lista) {
+  CONTADORES_OS.forEach(c => {
+    const el = document.getElementById(`os-contador-${c.id}`);
+    if (el) el.textContent = contarOsPorAssunto(lista, c.marcador);
+  });
 }
 
 // O dashboard só traz as OS mais recentes; busca a lista completa em segundo
-// plano para o número do card ficar certo. Enquanto isso, mostra a contagem local.
-async function atualizarContadorSuporteN1() {
+// plano para os números do card ficarem certos. Enquanto isso, mostra a contagem local.
+async function atualizarContadoresOs() {
   const loginId = state.loginSelecionado?.login_id;
   try {
     const raw = await postWebhook(WEBHOOK.url('busca_todas_os'), {
@@ -654,12 +665,12 @@ async function atualizarContadorSuporteN1() {
     if (state.loginSelecionado?.login_id !== loginId) return; // trocou de cliente
     const bloco = Array.isArray(raw) ? (raw[0] || {}) : raw;
     const osRaw = bloco['ordem_de_serviço'] || bloco.ordens_servico || [];
-    setContadorSuporteN1(contarSuporteN1(osRaw.map(o => ({
+    setContadoresOs(osRaw.map(o => ({
       data:    o.data_abertura_ordem || '',
       assunto: o.assunto_ordem       || '',
-    }))));
+    })));
   } catch (err) {
-    console.error('[contador suporte N1]', err);
+    console.error('[contadores de OS]', err);
   }
 }
 
@@ -734,7 +745,14 @@ function cardAvisos(c) {
         Nenhum aviso no momento
       </div>`;
 
-  const qtdN1 = contarSuporteN1(c.ordens_servico);
+  const contadoresOs = CONTADORES_OS.map(ct => `
+      <div class="os-contador os-contador-${ct.id}" title="${ct.label} abertas nos últimos ${MESES_CONTADOR_OS} meses">
+        <div class="os-contador-qtd" id="os-contador-${ct.id}">${contarOsPorAssunto(c.ordens_servico, ct.marcador)}</div>
+        <div class="os-contador-texto">
+          <div class="os-contador-label">${ct.label}</div>
+          <div class="os-contador-periodo">últimos ${MESES_CONTADOR_OS} meses</div>
+        </div>
+      </div>`).join('');
 
   return `
   <div class="card card-avisos">
@@ -749,11 +767,7 @@ function cardAvisos(c) {
     </div>
     <div class="avisos-layout">
       <div class="avisos-lista">${body}</div>
-      <div class="os-n1-box" title="OS com o assunto Suporte N1 abertas nos últimos 3 meses">
-        <div class="os-n1-count" id="os-n1-count">${qtdN1}</div>
-        <div class="os-n1-label">OS de Suporte N1</div>
-        <div class="os-n1-periodo">últimos 3 meses</div>
-      </div>
+      <div class="os-contadores">${contadoresOs}</div>
     </div>
   </div>`;
 }
@@ -1139,6 +1153,9 @@ function cardFibraONU(f) {
       <span id="btn-potencia-atual-icon">${iconReload()}</span>
       <span id="btn-potencia-atual-label">Potência atual</span>
     </button>
+    <button type="button" class="btn-geral-acao btn-geral-acao-perigo btn-reiniciar-onu" id="btn-reiniciar-onu" data-id-onu="${esc(f.id_onu||'')}" title="Reiniciar a ONU do cliente">
+      Reiniciar ONU
+    </button>
     ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
     ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
     ${fieldRow(iconHash(),   'MAC',         `<span class="mono">${esc(f.mac||'—')}</span>`)}
@@ -1454,6 +1471,7 @@ function bindDashboardEvents(contrato) {
 
   // Limpar MAC / Desconectar login — pedem confirmação e chamam o webhook
   bindAcaoLogin('btn-limpar-mac',        'limpar_mac',        'Limpar o MAC do login',  'MAC limpo com sucesso.');
+  bindAcaoLogin('btn-reiniciar-onu',     'reiniciar_onu',     'Reiniciar a ONU',        'ONU reiniciada com sucesso.');
   bindAcaoLogin('btn-desconectar-login', 'desconectar_login', 'Desconectar o login',    'Login desconectado com sucesso.');
 
   // Abrir atendimento — abre o modal de novo atendimento
@@ -2449,12 +2467,15 @@ function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso) {
   if (!btn) return;
   btn.addEventListener('click', async () => {
     if (btn.dataset.loading) return;
+    // Botões de login levam data-login; o da ONU leva data-id-onu
     const login = btn.dataset.login;
-    if (!login || login === '—') { alert('Login PPPoE não encontrado para este cliente.'); return; }
+    const idOnu = btn.dataset.idOnu;
+    if (login !== undefined && (!login || login === '—')) { alert('Login PPPoE não encontrado para este cliente.'); return; }
+    if (idOnu !== undefined && !idOnu) { alert('ID da ONU não encontrado para este cliente.'); return; }
 
     const url = WEBHOOK.url(webhookKey);
     if (!url) { alert('Webhook desta ação ainda não foi configurado.'); return; }
-    if (!confirm(`${descricao} "${login}"?`)) return;
+    if (!confirm(login ? `${descricao} "${login}"?` : `${descricao}?`)) return;
 
     const rotulo = btn.textContent;
     btn.dataset.loading = '1';
@@ -2463,6 +2484,7 @@ function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso) {
     try {
       const raw = await postWebhook(url, {
         login,
+        id_onu:     idOnu,
         login_id:   state.loginSelecionado?.login_id,
         cliente_id: state.clienteSelecionado?.cliente_id
       });

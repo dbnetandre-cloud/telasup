@@ -952,7 +952,8 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   color: var(--text-muted);
 }
 .onu-signal-extra:empty { display: none; }
-.btn-potencia-atual { width: 100%; justify-content: center; margin-bottom: 14px; }
+.btn-potencia-atual { width: 100%; justify-content: center; margin-bottom: 8px; }
+.btn-reiniciar-onu  { width: 100%; margin-bottom: 14px; }
 .btn-geral-acao-perigo { color: var(--red); border-color: rgba(244,63,94,0.25); background: var(--red-dim); }
 .btn-geral-acao-perigo:hover:not(:disabled) { color: var(--red); border-color: var(--red); background: var(--red-dim); }
 .btn-geral-acao:disabled { opacity: 0.6; cursor: wait; }
@@ -1327,34 +1328,44 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   flex: 1;
 }
 .avisos-lista { flex: 1; min-width: 0; }
-.os-n1-box {
-  flex: 0 0 150px;
+.os-contadores {
+  flex: 0 0 190px;
   display: flex;
   flex-direction: column;
+  gap: 10px;
+}
+.os-contador {
+  flex: 1;
+  display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  gap: 4px;
-  padding: 14px 12px;
+  gap: 12px;
+  padding: 10px 14px;
   background: var(--amber-dim);
   border: 1px solid rgba(245,158,11,0.25);
   border-radius: var(--radius-md);
 }
-.os-n1-count {
-  font-size: 44px;
+.os-contador-qtd {
+  min-width: 40px;
+  text-align: center;
+  font-size: 36px;
   font-weight: 800;
   line-height: 1;
   color: var(--amber);
 }
-.os-n1-label {
+.os-contador-label {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
 }
-.os-n1-periodo {
+.os-contador-periodo {
   font-size: 11px;
   color: var(--text-muted);
 }
+.os-contador-retencao {
+  background: var(--red-dim);
+  border-color: rgba(244,63,94,0.25);
+}
+.os-contador-retencao .os-contador-qtd { color: var(--red); }
 
 /* ─── CARD OS ─────────────────────────────────────────── */
 .card-os { grid-column: span 4; }
@@ -1699,7 +1710,7 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .card-geral     { grid-column: span 1; }
   .card-avisos    { grid-column: span 1; }
   .avisos-layout  { flex-direction: column-reverse; }
-  .os-n1-box      { flex: none; }
+  .os-contadores  { flex: none; }
   .card-os        { grid-column: span 1; }
   .geral-grid     { grid-template-columns: 1fr 1fr; }
   .btn-geral-acao { flex: 1; }
