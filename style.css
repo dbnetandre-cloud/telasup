@@ -910,6 +910,53 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
 }
 .geral-conn .badge-dot { width: 9px; height: 9px; }
 
+/* Ações no canto inferior direito do card (Limpar MAC / Desconectar login) */
+.geral-acoes {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn-geral-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  white-space: nowrap;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text-secondary);
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  z-index: 1;
+}
+.btn-geral-acao:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+  background: var(--surface-2);
+}
+.btn-geral-acao-icone svg { width: 14px; height: 14px; }
+.onu-signal-extra {
+  margin: -6px 0 10px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.onu-signal-extra:empty { display: none; }
+.btn-potencia-atual { width: 100%; justify-content: center; margin-bottom: 14px; }
+.btn-geral-acao-perigo { color: var(--red); border-color: rgba(244,63,94,0.25); background: var(--red-dim); }
+.btn-geral-acao-perigo:hover:not(:disabled) { color: var(--red); border-color: var(--red); background: var(--red-dim); }
+.btn-geral-acao:disabled { opacity: 0.6; cursor: wait; }
+
 .geral-badges {
   display: flex;
   flex-wrap: wrap;
@@ -1643,6 +1690,7 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .card-geral     { grid-column: span 2; }
   .card-os        { grid-column: span 2; }
   .geral-grid     { grid-template-columns: 1fr; }
+  .geral-acoes    { justify-content: flex-start; }
 }
 
 @media (max-width: 600px) {
@@ -1654,6 +1702,7 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .os-n1-box      { flex: none; }
   .card-os        { grid-column: span 1; }
   .geral-grid     { grid-template-columns: 1fr 1fr; }
+  .btn-geral-acao { flex: 1; }
   .boleto-actions { flex-direction: column; }
   .btn-boleto     { flex: none; width: 100%; }
   .selection-list { grid-template-columns: 1fr; }

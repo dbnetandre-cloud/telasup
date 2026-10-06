@@ -106,6 +106,11 @@ const WEBHOOK = {
   abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
   historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
   pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
+  // Ações do card Dados Gerais (enquanto a URL estiver vazia, o botão avisa que não está configurado)
+  limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
+  desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
+  potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',   // { id_onu, login_id, cliente_id } → [{ data: "<html do IXC>" }] (só Sinal Rx/Tx, Temperatura e Voltagem são lidos)
+  status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',   // leve: { login_id, cliente_id } → { online: 'S'|'N', ip } (vazio = Recarregar refaz tudo)
 
   // Teste (ativo quando URL contém ?test)
   test_busca_cliente  : 'https://n8n.dbnet.com.vc/webhook-test/ideia-busca-cliente',
@@ -115,6 +120,10 @@ const WEBHOOK = {
   test_abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
   test_historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
   test_pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
+  test_limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
+  test_desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
+  test_potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',
+  test_status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',
 
   token : 'Bearer 6a9d4bda75d5c9a7c60d4f3d22cdc5c39a83bd27f3b5399bb027834e524d6dd4',
 
@@ -152,6 +161,10 @@ const WEBHOOK = {
   [5] pegar_url_acs
       Envia:   { "login": "23442andre" } — login PPPoE (número + nome), não o login_id
       Retorna: string/URL do ACS (aceita string direta, { "url": "..." } ou array de qualquer um dos dois)
+
+  [6] status_conexao (recarregar-ip) — botão Recarregar do card Dados Gerais
+      Envia:   { "login_id": 101, "cliente_id": 1, "login": "23442andre" }
+      Retorna: { "online": "S" | "N", "ip": "177.52.30.142" } (ou array com um objeto)
 */
 
 // ══════════════════════════════════════════════════════
@@ -605,6 +618,7 @@ function renderDashboard(cliente, contrato) {
   showScreen('screen-dashboard');
   bindDashboardEvents(contrato);
   atualizarContadorSuporteN1();
+  consultarPotenciaAtual(true); // ao abrir o dashboard já puxa o estado atual da ONU
 }
 
 // ─── CONTADOR DE OS — SUPORTE N1 (últimos 3 meses) ────
@@ -792,7 +806,7 @@ function cardGeral(cliente, c) {
         </svg>
       </div>
       <span class="card-title">Dados Gerais</span>
-      <span class="geral-conn">${connBadge}</span>
+      <span class="geral-conn" id="geral-conn">${connBadge}</span>
     </div>
     <div class="geral-main">
       <div class="geral-avatar">${initials}</div>
@@ -806,8 +820,8 @@ function cardGeral(cliente, c) {
       <div class="geral-field">
         <span class="geral-field-label">IP do Roteador</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="geral-field-value">${esc(c.ip_roteador||'—')}</span>
-          ${c.ip_roteador ? `<a href="http://${esc(c.ip_roteador)}" target="_blank" rel="noopener" class="btn-ip-open" title="Abrir no navegador">
+          <span class="geral-field-value" id="geral-ip-value">${esc(c.ip_roteador||'—')}</span>
+          ${c.ip_roteador ? `<a href="http://${esc(c.ip_roteador)}" id="geral-ip-link" target="_blank" rel="noopener" class="btn-ip-open" title="Abrir no navegador">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -824,9 +838,17 @@ function cardGeral(cliente, c) {
         <span class="geral-field-label">Data de Nascimento</span>
         <span class="geral-field-value">${c.data_nascimento ? formatDate(c.data_nascimento) : '—'}</span>
       </div>
-      <div class="geral-field">
-        <span class="geral-field-label">Gênero</span>
-        <span class="geral-field-value">${esc(c.genero||'—')}</span>
+      <div class="geral-acoes">
+        <button type="button" class="btn-geral-acao btn-geral-acao-icone" id="btn-recarregar" data-login="${esc(c.login_pppoe||'')}" title="Atualizar status online/offline e IP">
+          <span id="btn-recarregar-icon">${iconReload()}</span>
+          Recarregar
+        </button>
+        <button type="button" class="btn-geral-acao" id="btn-limpar-mac" data-login="${esc(c.login_pppoe||'')}" title="Limpar o MAC vinculado ao login">
+          Limpar MAC
+        </button>
+        <button type="button" class="btn-geral-acao btn-geral-acao-perigo" id="btn-desconectar-login" data-login="${esc(c.login_pppoe||'')}" title="Derrubar a conexão do login">
+          Desconectar login
+        </button>
       </div>
     </div>
   </div>`;
@@ -1085,9 +1107,7 @@ function cardMVNO(linhas) {
 function cardFibraONU(f) {
   const semFibra = !f || !f.transmissor;
   const dbm = semFibra ? 0 : (parseFloat(f.ultima_potencia) || 0);
-  const sigClass = dbm >= -26 ? 'signal-good' : 'signal-bad';
-  const sigLabel = dbm >= -26 ? 'Boa'         : 'Atenção';
-  const sigIcon  = dbm >= -26 ? '📶'          : '⚠️';
+  const { sigClass, sigLabel, sigIcon } = classificarSinal(dbm);
   return `
   <div class="card">
     <div class="card-header">
@@ -1106,14 +1126,19 @@ function cardFibraONU(f) {
       </button>`}
     </div>
     ${semFibra ? emptyCardState('Nenhuma ONU encontrada para este cliente') : `
-    <div class="signal-bar ${sigClass}">
-      <span class="signal-icon">${sigIcon}</span>
+    <div class="signal-bar ${sigClass}" id="onu-signal-bar">
+      <span class="signal-icon" id="onu-signal-icon">${sigIcon}</span>
       <div>
-        <div class="signal-label">Última Potência</div>
-        <div class="signal-value">${dbm} dBm</div>
+        <div class="signal-label" id="onu-signal-label">Última Potência</div>
+        <div class="signal-value" id="onu-signal-value">${dbm} dBm</div>
       </div>
-      <span class="signal-qual">${sigLabel}</span>
+      <span class="signal-qual" id="onu-signal-qual">${sigLabel}</span>
     </div>
+    <div class="onu-signal-extra" id="onu-signal-extra"></div>
+    <button type="button" class="btn-geral-acao btn-geral-acao-icone btn-potencia-atual" id="btn-potencia-atual" data-id-onu="${esc(f.id_onu||'')}" title="Consultar a potência da ONU agora">
+      <span id="btn-potencia-atual-icon">${iconReload()}</span>
+      <span id="btn-potencia-atual-label">Potência atual</span>
+    </button>
     ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
     ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
     ${fieldRow(iconHash(),   'MAC',         `<span class="mono">${esc(f.mac||'—')}</span>`)}
@@ -1389,6 +1414,47 @@ function bindDashboardEvents(contrato) {
       }
     });
   }
+
+  // Recarregar — refaz a busca do cliente e redesenha o dashboard
+  const btnRecarregar = document.getElementById('btn-recarregar');
+  if (btnRecarregar) {
+    btnRecarregar.addEventListener('click', async () => {
+      if (btnRecarregar.dataset.loading) return;
+      btnRecarregar.dataset.loading = '1';
+      btnRecarregar.disabled = true;
+      document.getElementById('btn-recarregar-icon').classList.add('spinning');
+      const urlStatus = WEBHOOK.url('status_conexao');
+      try {
+        if (urlStatus) {
+          // Leve: só online/offline e IP, sem redesenhar o dashboard
+          const raw = await postWebhook(urlStatus, {
+            login:      btnRecarregar.dataset.login,
+            login_id:   state.loginSelecionado?.login_id,
+            cliente_id: state.clienteSelecionado?.cliente_id
+          });
+          aplicarStatusConexao(raw);
+        } else {
+          // Webhook leve ainda não configurado: recarrega tudo (redesenha o card)
+          await etapa4_carregarDashboard(state.loginSelecionado);
+          return;
+        }
+      } catch (err) {
+        console.error('[recarregar status]', err);
+        alert('Erro ao recarregar os dados. Tente novamente.');
+      }
+      delete btnRecarregar.dataset.loading;
+      btnRecarregar.disabled = false;
+      document.getElementById('btn-recarregar-icon').classList.remove('spinning');
+    });
+  }
+
+  // Potência atual — consulta o sinal da ONU na hora e atualiza só a barra de sinal
+  const btnPotAtual = document.getElementById('btn-potencia-atual');
+  if (btnPotAtual) btnPotAtual.addEventListener('click', () => consultarPotenciaAtual(false));
+
+  // Limpar MAC / Desconectar login — pedem confirmação e chamam o webhook
+  bindAcaoLogin('btn-limpar-mac',        'limpar_mac',        'Limpar o MAC do login',  'MAC limpo com sucesso.');
+  bindAcaoLogin('btn-desconectar-login', 'desconectar_login', 'Desconectar o login',    'Login desconectado com sucesso.');
 
   // Abrir atendimento — abre o modal de novo atendimento
   const btnAbrirAtendimento = document.getElementById('btn-abrir-atendimento');
@@ -1997,6 +2063,7 @@ function normalizarContrato(raw) {
     mac:             onu.mac      || '—',
     vlan:            onu.vlan     || '—',
     ultima_potencia: onu.sinal_rx || '0',
+    id_onu:          onu.id_onu,
   } : null;
 
   // ── Telefonia VoIP ──
@@ -2204,6 +2271,213 @@ function toArray(data) {
   if (Array.isArray(data?.data))     return data.data;
   if (data && typeof data === 'object') return [data];
   return [];
+}
+
+// Classificação do sinal óptico (≥ -26 dBm é boa)
+function classificarSinal(dbm) {
+  const boa = dbm >= -26;
+  return {
+    sigClass: boa ? 'signal-good' : 'signal-bad',
+    sigLabel: boa ? 'Boa'         : 'Atenção',
+    sigIcon:  boa ? '📶'          : '⚠️',
+  };
+}
+
+// O webhook devolve [{ data: "<html>…" }] (painel do IXC com linhas "Sinal Rx: -20.55").
+// O HTML só é lido com DOMParser (não executa scripts) e dele saem apenas os valores.
+function extrairPotenciaAtual(raw) {
+  const item = Array.isArray(raw) ? raw[0] : raw;
+  const html = typeof item === 'string' ? item : item?.data;
+  if (typeof html !== 'string') throw new Error('Resposta sem HTML');
+
+  const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const campos = {};
+  doc.querySelectorAll('.panel-body div').forEach(d => {
+    const t = d.textContent;
+    const i = t.indexOf(':');
+    if (i > 0) campos[norm(t.slice(0, i))] = t.slice(i + 1).trim();
+  });
+
+  const rx = parseFloat(campos['sinal rx']);
+  if (isNaN(rx)) {
+    // O IXC avisa "Onu Offline!" quando não consegue ler a ONU
+    // e, nesse caso, traz a causa da última queda (LOS, Dying Gasp…) e quando ela ocorreu
+    if (norm(doc.body?.textContent || '').includes('onu offline')) {
+      const m = (campos['last down time'] || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/);
+      return {
+        offline: true,
+        causa: campos['causa da ultima queda'],
+        ultimaQueda: m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}` : '',
+      };
+    }
+    throw new Error('Sinal Rx não encontrado na resposta');
+  }
+  return {
+    rx,
+    tx:          campos['sinal tx'],
+    temperatura: campos['temperatura'],
+    voltagem:    campos['voltagem'],
+  };
+}
+
+// Consulta a ONU na hora e atualiza só a barra de sinal. Roda sozinha ao abrir o
+// dashboard (silencioso: se falhar, fica o valor antigo sem alerta) e a cada clique.
+async function consultarPotenciaAtual(silencioso) {
+  const btn = document.getElementById('btn-potencia-atual');
+  if (!btn || btn.dataset.loading) return;   // cliente sem ONU, ou já consultando
+
+  const url = WEBHOOK.url('potencia_atual');
+  if (!url) {
+    if (!silencioso) alert('Webhook da potência atual ainda não foi configurado.');
+    return;
+  }
+
+  const icone  = btn.querySelector('#btn-potencia-atual-icon');
+  const rotulo = btn.querySelector('#btn-potencia-atual-label');
+  const loginId = state.loginSelecionado?.login_id;
+
+  btn.dataset.loading = '1';
+  btn.disabled = true;
+  icone.classList.add('spinning');
+  rotulo.textContent = 'Consultando...';
+  try {
+    const raw = await postWebhook(url, {
+      id_onu:     btn.dataset.idOnu,
+      login_id:   loginId,
+      cliente_id: state.clienteSelecionado?.cliente_id
+    });
+    // Se o dashboard foi redesenhado ou trocou de cliente enquanto esperava, descarta
+    if (!btn.isConnected || state.loginSelecionado?.login_id !== loginId) return;
+    aplicarPotenciaAtual(extrairPotenciaAtual(raw));
+  } catch (err) {
+    console.error('[potencia_atual]', err);
+    if (!silencioso) alert('Erro ao consultar a potência. Tente novamente.');
+  } finally {
+    delete btn.dataset.loading;
+    btn.disabled = false;
+    icone.classList.remove('spinning');
+    rotulo.textContent = 'Potência atual';
+  }
+}
+
+function aplicarPotenciaAtual(info) {
+  const rotuloBarra = document.getElementById('onu-signal-label');
+  if (rotuloBarra) rotuloBarra.textContent = info.offline ? 'Estado da ONU' : 'Potência Atual';
+
+  if (info.offline) {
+    document.getElementById('onu-signal-bar').className = 'signal-bar signal-bad';
+    document.getElementById('onu-signal-icon').textContent  = '🔌';
+    // A causa (LOS, Dying Gasp…) toma o lugar de "Onu Offline!" para ficar bem à vista
+    document.getElementById('onu-signal-value').textContent = info.causa || 'Onu Offline!';
+    document.getElementById('onu-signal-qual').textContent  = 'Offline';
+    document.getElementById('onu-signal-extra').textContent = [
+      info.causa       ? 'Onu Offline — causa da última queda' : '',
+      info.ultimaQueda ? `caiu em ${info.ultimaQueda}`         : '',
+    ].filter(Boolean).join(' · ');
+    return;
+  }
+
+  const { sigClass, sigLabel, sigIcon } = classificarSinal(info.rx);
+  document.getElementById('onu-signal-bar').className = `signal-bar ${sigClass}`;
+  document.getElementById('onu-signal-icon').textContent  = sigIcon;
+  document.getElementById('onu-signal-value').textContent = `${info.rx} dBm`;
+  document.getElementById('onu-signal-qual').textContent  = sigLabel;
+
+  const extra = [
+    info.tx          ? `Tx ${info.tx} dBm`      : '',
+    info.temperatura ? `${info.temperatura} °C` : '',
+    info.voltagem    ? `${info.voltagem} V`     : '',
+  ].filter(Boolean).join(' · ');
+  document.getElementById('onu-signal-extra').textContent = extra;
+}
+
+// Atualiza no card Dados Gerais só o badge online/offline e o IP do roteador.
+// Aceita objeto ou array de um objeto: { online: 'S'|'N', ip: '...' } (mesmos nomes do busca_info)
+function aplicarStatusConexao(raw) {
+  const r = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+  if (r.online === undefined && r.ip === undefined) throw new Error('Resposta sem online/ip');
+
+  if (r.online !== undefined) {
+    const on = r.online === 'S' || r.online === true || r.online === 'true' || r.online === 'online';
+    document.getElementById('geral-conn').innerHTML = on
+      ? `<span class="badge badge-online"><span class="badge-dot"></span>Online</span>`
+      : `<span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>`;
+  }
+
+  if (r.ip !== undefined) {
+    const ip = r.ip || '';
+    document.getElementById('geral-ip-value').textContent = ip || '—';
+    const link = document.getElementById('geral-ip-link');
+    if (link) {
+      link.href = `http://${ip}`;
+      link.style.display = ip ? '' : 'none';
+    }
+  }
+}
+
+// O IXC responde [{ data: "<json>" }] em dois formatos:
+//   { type, message }                       (Limpar MAC)
+//   { msg: [{ type, message, titulo }] }    (Desconectar login)
+// A mensagem pode ter <br />. Devolve { type, message } em texto puro;
+// se falhar qualquer item, type é o do primeiro que falhou. Sem esses formatos, vem vazio.
+function extrairResultadoAcao(raw) {
+  try {
+    const item = Array.isArray(raw) ? raw[0] : raw;
+    let obj = item?.data ?? item;
+    if (typeof obj === 'string') obj = JSON.parse(obj);
+    if (!obj || typeof obj !== 'object') return {};
+
+    const itens = Array.isArray(obj.msg) ? obj.msg : [obj];
+    const texto = m => new DOMParser()
+      .parseFromString(String(m ?? '').replace(/<br\s*\/?>/gi, '\n'), 'text/html')
+      .body.textContent.trim();
+
+    const falha = itens.find(i => i?.type && i.type !== 'success');
+    return {
+      type:    (falha || itens[0] || {}).type,
+      message: itens.map(i => texto(i?.message)).filter(Boolean).join('\n'),
+    };
+  } catch (_) {
+    return {};
+  }
+}
+
+// Botão que dispara uma ação sobre o login PPPoE do cliente (webhook key = chave em WEBHOOK)
+function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (btn.dataset.loading) return;
+    const login = btn.dataset.login;
+    if (!login || login === '—') { alert('Login PPPoE não encontrado para este cliente.'); return; }
+
+    const url = WEBHOOK.url(webhookKey);
+    if (!url) { alert('Webhook desta ação ainda não foi configurado.'); return; }
+    if (!confirm(`${descricao} "${login}"?`)) return;
+
+    const rotulo = btn.textContent;
+    btn.dataset.loading = '1';
+    btn.disabled = true;
+    btn.textContent = 'Aguarde...';
+    try {
+      const raw = await postWebhook(url, {
+        login,
+        login_id:   state.loginSelecionado?.login_id,
+        cliente_id: state.clienteSelecionado?.cliente_id
+      });
+      const res = extrairResultadoAcao(raw);
+      if (res.type && res.type !== 'success') alert(res.message || 'A ação não foi concluída.');
+      else alert(res.message || msgSucesso);
+    } catch (err) {
+      console.error(`[${webhookKey}]`, err);
+      alert('Erro ao executar a ação. Tente novamente.');
+    } finally {
+      delete btn.dataset.loading;
+      btn.disabled = false;
+      btn.textContent = rotulo;
+    }
+  });
 }
 
 // POST genérico para webhooks
