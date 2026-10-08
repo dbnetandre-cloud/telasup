@@ -1402,10 +1402,11 @@ const OS_DESC_LIMITE = 120; // acima disso a descrição fica recolhida com "ver
 // Texto longo da OS (descrição / resposta do técnico): recolhido com "ver mais"
 function osTextoLongo(texto) {
   const t = String(texto ?? '');
-  const longa = t.length > OS_DESC_LIMITE;
+  const longa = t.length > OS_DESC_LIMITE || t.split(/\r?\n/).length > 2;
+  // o botão fica em cima, à direita: não se desloca quando o texto expande
   return `
-      <div class="os-desc${longa ? ' os-desc-recolhida' : ''}"${longa ? ` title="${esc(t)}"` : ''}>${esc(t)}</div>
-      ${longa ? '<button type="button" class="os-ver-mais">ver mais</button>' : ''}`;
+      ${longa ? '<button type="button" class="os-ver-mais">ver mais</button>' : ''}
+      <div class="os-desc${longa ? ' os-desc-recolhida' : ''}"${longa ? ` title="${esc(t)}"` : ''}>${esc(t)}</div>`;
 }
 
 function osRow(os) {
@@ -1429,7 +1430,7 @@ function osRow(os) {
 document.addEventListener('click', e => {
   const btn = e.target.closest('.os-ver-mais');
   if (!btn) return;
-  const desc = btn.previousElementSibling;
+  const desc = btn.nextElementSibling;
   const aberta = desc.classList.toggle('os-desc-recolhida') === false;
   btn.textContent = aberta ? 'ver menos' : 'ver mais';
 });
