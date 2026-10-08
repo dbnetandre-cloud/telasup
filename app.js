@@ -606,20 +606,21 @@ function renderDashboard(cliente, contrato) {
     cardGeral(cliente, contrato),
     cardAvisos(contrato),
     cardFibraONU(contrato.fibra_onu || {}),
-    cardComodatos(contrato.comodatos || []),
     cardAcesso(contrato),
+    // Se o busca_info ainda trouxer as OS, mostra na hora; senão o card nasce em "carregando"
+    cardOS(contrato.ordens_servico?.length ? contrato.ordens_servico : null),
+    cardComodatos(contrato.comodatos || []),
     cardProdutos(contrato.produtos_contratados || []),
     cardTelefonia(contrato.telefonia || {}),
     cardMVNO(contrato.linhas_mvno || []),
     cardContatos(contrato.contatos || (cliente && cliente.contatos) || {}),
     cardEndereco(contrato.endereco),
-    cardFinanceiro(contrato.financeiro || {}),
-    cardOS(contrato.ordens_servico || [])
+    cardFinanceiro(contrato.financeiro || {})
   ].join('');
 
   showScreen('screen-dashboard');
   bindDashboardEvents(contrato);
-  atualizarContadoresOs();
+  carregarOs();
   consultarPotenciaAtual(true); // ao abrir o dashboard já puxa o estado atual da ONU
 }
 
@@ -629,48 +630,151 @@ function renderDashboard(cliente, contrato) {
 const CONTADORES_OS = [
   { id: 'n1',       marcador: '[suporte n1]', label: 'OS de Suporte N1' },
   { id: 'retencao', marcador: '[retencao]',   label: 'OS de Retenção'   },
+  { id: 'n3',       marcador: ['manutencao interna - n3', 'manutencao n3 - quarentena'], label: 'OS de Manutenção N3' },
 ];
 const MESES_CONTADOR_OS = 3;
 
-const semAcento = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// minúsculo, sem acento e com espaços colapsados, para comparar assuntos
+const semAcento = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .toLowerCase().replace(/\s+/g, ' ');
 
-// Recebe lista de { data, assunto } e conta as OS do assunto abertas nos
-// últimos 3 meses. A data vem como "YYYY-MM-DD HH:MM:SS".
-function contarOsPorAssunto(lista, marcador) {
+// Recebe lista de { data, assunto } e conta as OS cujo assunto contém algum dos
+// marcadores (texto ou lista de textos), abertas nos últimos 3 meses.
+// A data vem como "YYYY-MM-DD HH:MM:SS".
+function osPorAssunto(lista, marcador) {
+  const marcadores = [].concat(marcador);
   const limite = new Date();
   limite.setMonth(limite.getMonth() - MESES_CONTADOR_OS);
   return (lista || []).filter(o => {
-    if (!semAcento(o.assunto).includes(marcador)) return false;
+    const assunto = semAcento(o.assunto);
+    if (!marcadores.some(m => assunto.includes(m))) return false;
     const aberta = new Date(String(o.data || '').replace(' ', 'T'));
     return !isNaN(aberta) && aberta >= limite;
-  }).length;
-}
-
-function setContadoresOs(lista) {
-  CONTADORES_OS.forEach(c => {
-    const el = document.getElementById(`os-contador-${c.id}`);
-    if (el) el.textContent = contarOsPorAssunto(lista, c.marcador);
   });
 }
 
-// O dashboard só traz as OS mais recentes; busca a lista completa em segundo
-// plano para os números do card ficarem certos. Enquanto isso, mostra a contagem local.
-async function atualizarContadoresOs() {
+function contarOsPorAssunto(lista, marcador) {
+  return osPorAssunto(lista, marcador).length;
+}
+
+// Se houve OS de Suporte N1 nos últimos 3 meses, mostra na lista de avisos (à esquerda)
+// o diagnóstico da mais recente.
+function atualizarAvisoDiagnosticoN1(lista) {
+  const container = document.getElementById('avisos-lista');
+  if (!container) return;
+  container.querySelector('.aviso-diagnostico-n1')?.remove();
+
+  const n1 = CONTADORES_OS.find(c => c.id === 'n1');
+  const ultima = osPorAssunto(lista, n1.marcador)
+    .sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')))[0];
+  const diag = String(ultima?.diagnostico ?? '').trim();
+  if (!ultima || !diag || diag === '—') return;
+
+  container.querySelector('.no-boleto')?.remove(); // havia "Nenhum aviso no momento"
+  container.insertAdjacentHTML('beforeend', `
+    <div class="aviso-item aviso-atencao aviso-diagnostico-n1" title="${esc(diag)}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="aviso-texto">Último diagnóstico N1 (${formatDate(ultima.data)}): ${esc(diag)}</span>
+    </div>`);
+}
+
+// Preenche os contadores. Até a lista chegar eles mostram "···" (carregando), nunca um 0;
+// sem lista (falha na consulta) mostram "—".
+function setContadoresOs(lista) {
+  CONTADORES_OS.forEach(c => {
+    const el = document.getElementById(`os-contador-${c.id}`);
+    if (!el) return;
+    el.classList.remove('os-contador-carregando');
+    el.title = lista ? '' : 'Não foi possível consultar as OS';
+    el.textContent = lista ? contarOsPorAssunto(lista, c.marcador) : '—';
+  });
+}
+
+// As OS saíram do busca_info: depois que o dashboard aparece, busca a lista completa
+// (busca_todas_os) em segundo plano e com ela preenche o card, os contadores do card
+// Avisos e o modal "Ver todas" (state.osTodas fica em cache).
+function normalizarOsLista(raw) {
+  const bloco = Array.isArray(raw) ? (raw[0] || {}) : (raw || {});
+  const osRaw = bloco['ordem_de_serviço'] || bloco.ordens_servico || [];
+  return osRaw.map(o => ({
+    os_id:    o.id_ordem            || '—',
+    data:     o.data_abertura_ordem || '',
+    assunto:  o.assunto_ordem       || o.id_assunto || '—',
+    setor:    SETORES[String(o.setor_ordem)] || o.setor_ordem || '—',
+    setor_id: String(o.setor_ordem ?? ''),
+    status:   mapStatusOS(o.status_ordem),
+    descricao: o.mensagem_ordem     || '—',
+    diagnostico: o.diagnostico      || '—',
+  }));
+}
+
+// Quantas OS aparecem no card (o resto fica em "Ver todas as OS"):
+// 10 no notebook (OS ocupa as linhas 2-3, ao lado de Fibra + Acesso), 6 nas demais telas
+const MQ_NOTEBOOK = window.matchMedia('(min-width: 1201px) and (max-width: 1699px)');
+const osNoCard = () => (MQ_NOTEBOOK.matches ? 10 : 6);
+// Ao cruzar o breakpoint (redimensionar a janela), redesenha as linhas do card
+MQ_NOTEBOOK.addEventListener('change', () => {
+  const tbody = document.getElementById('os-tbody');
+  if (!tbody || !state.osTodas) return;
+  const visiveis = osMaisRecentes(state.osTodas);
+  tbody.innerHTML = visiveis.length ? visiveis.map(osRow).join('') : osMensagemLinha(osMensagemVazia(state.osTodas));
+  const total = document.getElementById('os-total');
+  if (total) total.textContent = `${visiveis.length} OS`;
+});
+// Setores (setor_ordem) que aparecem no card. O botão "Ver todas as OS" mostra todos.
+const OS_SETORES_NO_CARD = ['58', '50', '48', '28'];
+
+// As osNoCard() mais recentes dos setores acima, da mais nova para a mais antiga
+// (data "YYYY-MM-DD HH:MM:SS")
+function osMaisRecentes(lista) {
+  return (lista || [])
+    .filter(o => OS_SETORES_NO_CARD.includes(String(o.setor_id)))
+    .sort((a, b) => String(b.data || '').localeCompare(String(a.data || '')))
+    .slice(0, osNoCard());
+}
+
+// Mensagem do card quando não há nada para listar
+function osMensagemVazia(lista) {
+  return lista?.length
+    ? 'Nenhuma OS dos setores exibidos aqui. Use "Ver todas as OS" para ver as demais.'
+    : 'Nenhuma OS encontrada.';
+}
+
+async function carregarOs() {
   const loginId = state.loginSelecionado?.login_id;
+  state.osTodas = null;
   try {
     const raw = await postWebhook(WEBHOOK.url('busca_todas_os'), {
       login_id:   loginId,
       cliente_id: state.clienteSelecionado?.cliente_id
     });
     if (state.loginSelecionado?.login_id !== loginId) return; // trocou de cliente
-    const bloco = Array.isArray(raw) ? (raw[0] || {}) : raw;
-    const osRaw = bloco['ordem_de_serviço'] || bloco.ordens_servico || [];
-    setContadoresOs(osRaw.map(o => ({
-      data:    o.data_abertura_ordem || '',
-      assunto: o.assunto_ordem       || '',
-    })));
+    const todas = normalizarOsLista(raw);
+    state.osTodas = todas;
+
+    const tbody = document.getElementById('os-tbody');
+    const total = document.getElementById('os-total');
+    if (tbody) {
+      const visiveis = osMaisRecentes(todas);
+      tbody.innerHTML = visiveis.length ? visiveis.map(osRow).join('') : osMensagemLinha(osMensagemVazia(todas));
+      if (total) total.textContent = `${visiveis.length} OS`;
+    }
+    setContadoresOs(todas);
+    atualizarAvisoDiagnosticoN1(todas);
   } catch (err) {
-    console.error('[contadores de OS]', err);
+    console.error('[busca_todas_os]', err);
+    if (state.loginSelecionado?.login_id === loginId) setContadoresOs(null);
+    const tbody = document.getElementById('os-tbody');
+    if (tbody && !tbody.querySelector('.col-id')) {
+      tbody.innerHTML = osMensagemLinha('Erro ao carregar as OS. <a href="#" id="os-retry">Tentar novamente</a>');
+      document.getElementById('os-retry')?.addEventListener('click', e => {
+        e.preventDefault();
+        tbody.innerHTML = osMensagemLinha('Carregando ordens de serviço...');
+        carregarOs();
+      });
+    }
   }
 }
 
@@ -747,7 +851,7 @@ function cardAvisos(c) {
 
   const contadoresOs = CONTADORES_OS.map(ct => `
       <div class="os-contador os-contador-${ct.id}" title="${ct.label} abertas nos últimos ${MESES_CONTADOR_OS} meses">
-        <div class="os-contador-qtd" id="os-contador-${ct.id}">${contarOsPorAssunto(c.ordens_servico, ct.marcador)}</div>
+        <div class="os-contador-qtd os-contador-carregando" id="os-contador-${ct.id}" title="Carregando...">···</div>
         <div class="os-contador-texto">
           <div class="os-contador-label">${ct.label}</div>
           <div class="os-contador-periodo">últimos ${MESES_CONTADOR_OS} meses</div>
@@ -766,7 +870,7 @@ function cardAvisos(c) {
       ${avisos.length ? `<span class="badge badge-bloqueado" style="margin-left:auto">${avisos.length}</span>` : ''}
     </div>
     <div class="avisos-layout">
-      <div class="avisos-lista">${body}</div>
+      <div class="avisos-lista" id="avisos-lista">${body}</div>
       <div class="os-contadores">${contadoresOs}</div>
     </div>
   </div>`;
@@ -851,6 +955,10 @@ function cardGeral(cliente, c) {
       <div class="geral-field">
         <span class="geral-field-label">Data de Nascimento</span>
         <span class="geral-field-value">${c.data_nascimento ? formatDate(c.data_nascimento) : '—'}</span>
+      </div>
+      <div class="geral-field geral-field-cadastro">
+        <span class="geral-field-label">Data de Cadastro</span>
+        <span class="geral-field-value">${c.data_cadastro ? formatDate(c.data_cadastro) : '—'}</span>
       </div>
       <div class="geral-acoes">
         <button type="button" class="btn-geral-acao btn-geral-acao-icone" id="btn-recarregar" data-login="${esc(c.login_pppoe||'')}" title="Atualizar status online/offline e IP">
@@ -945,7 +1053,7 @@ function cardComodatos(items) {
 // então cabem juntos com uma divisória entre eles.
 function cardAcesso(c) {
   return `
-  <div class="card">
+  <div class="card card-acesso">
     <div class="card-header">
       <div class="card-icon" style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2)">
         ${iconLockSvg('#a78bfa')}
@@ -1123,7 +1231,7 @@ function cardFibraONU(f) {
   const dbm = semFibra ? 0 : (parseFloat(f.ultima_potencia) || 0);
   const { sigClass, sigLabel, sigIcon } = classificarSinal(dbm);
   return `
-  <div class="card">
+  <div class="card card-fibra">
     <div class="card-header">
       <div class="card-icon" style="background:rgba(0,229,160,0.1);border:1px solid rgba(0,229,160,0.2)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -1156,10 +1264,13 @@ function cardFibraONU(f) {
     <button type="button" class="btn-geral-acao btn-geral-acao-perigo btn-reiniciar-onu" id="btn-reiniciar-onu" data-id-onu="${esc(f.id_onu||'')}" title="Reiniciar a ONU do cliente">
       Reiniciar ONU
     </button>
-    ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
-    ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
-    ${fieldRow(iconHash(),   'MAC',         `<span class="mono">${esc(f.mac||'—')}</span>`)}
-    ${fieldRow(iconHash(),   'VLAN',        `<span class="mono">${esc(f.vlan||'—')}</span>`)}
+    <details class="onu-detalhes">
+      <summary>Detalhes técnicos</summary>
+      ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
+      ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
+      ${fieldRow(iconHash(),   'MAC',         `<span class="mono">${esc(f.mac||'—')}</span>`)}
+      ${fieldRow(iconHash(),   'VLAN',        `<span class="mono">${esc(f.vlan||'—')}</span>`)}
+    </details>
     `}
   </div>`;
 }
@@ -1230,11 +1341,15 @@ function cardFinanceiro(fin) {
 }
 
 // ─── 10. ORDENS DE SERVIÇO ────────────────────────────
+// os_list = null → ainda carregando (a lista chega depois, via carregarOs)
 function cardOS(os_list) {
-  const visible = (os_list || []).slice(0, 10);
-  const tbody   = visible.length
-    ? visible.map(osRow).join('')
-    : `<tr><td colspan="5" style="color:var(--text-muted);padding:12px 0;font-size:13px">Nenhuma OS encontrada.</td></tr>`;
+  const carregando = os_list === null;
+  const visible = osMaisRecentes(os_list);
+  const tbody   = carregando
+    ? osMensagemLinha('<span class="spinner" style="width:14px;height:14px;vertical-align:-2px;margin-right:8px"></span>Carregando ordens de serviço...')
+    : visible.length
+      ? visible.map(osRow).join('')
+      : osMensagemLinha(osMensagemVazia(os_list));
 
   return `
   <div class="card card-os">
@@ -1243,12 +1358,12 @@ function cardOS(os_list) {
         ${iconOsSvg()}
       </div>
       <span class="card-title">Ordens de Serviço</span>
-      <span style="margin-left:auto;font-size:12px;color:var(--text-muted)">${visible.length} OS</span>
+      <span id="os-total" style="margin-left:auto;font-size:12px;color:var(--text-muted)">${carregando ? '' : `${visible.length} OS`}</span>
     </div>
     <table class="os-table">
       <thead>
         <tr>
-          <th class="col-id">ID</th><th class="col-date">Data</th><th class="col-type">Assunto</th><th class="col-setor">Setor</th><th class="col-status">Status</th><th class="col-desc">Descrição</th>
+          <th class="col-id">Data</th><th class="col-type">Assunto</th><th class="col-diag">Diagnóstico</th><th class="col-status">Status</th><th class="col-desc">Descrição</th>
         </tr>
       </thead>
       <tbody id="os-tbody">${tbody}</tbody>
@@ -1269,17 +1384,39 @@ function cardOS(os_list) {
   </div>`;
 }
 
+function osMensagemLinha(html) {
+  return `<tr><td colspan="5" style="color:var(--text-muted);padding:12px 0;font-size:13px">${html}</td></tr>`;
+}
+
+const OS_DESC_LIMITE = 120; // acima disso a descrição fica recolhida com "ver mais"
+
 function osRow(os) {
+  const desc = String(os.descricao ?? '');
+  const longa = desc.length > OS_DESC_LIMITE;
   return `
   <tr>
-    <td class="col-id">${esc(os.os_id)}</td>
-    <td class="col-date">${formatDate(os.data)}</td>
-    <td class="col-type">${esc(os.assunto)}</td>
-    <td class="col-setor">${esc(os.setor)}</td>
+    <td class="col-id os-data">${formatDate(os.data)}</td>
+    <td class="col-type">
+      <div class="os-assunto">${esc(os.assunto)}</div>
+      <div class="os-setor">${esc(os.setor)}</div>
+    </td>
+    <td class="col-diag" title="${esc(os.diagnostico ?? '')}"><div class="os-diag">${esc(os.diagnostico || '—')}</div></td>
     <td class="col-status"><span class="os-status ${osStatusClass(os.status)}">${esc(os.status)}</span></td>
-    <td class="col-desc">${esc(os.descricao)}</td>
+    <td class="col-desc">
+      <div class="os-desc${longa ? ' os-desc-recolhida' : ''}"${longa ? ` title="${esc(desc)}"` : ''}>${esc(desc)}</div>
+      ${longa ? '<button type="button" class="os-ver-mais">ver mais</button>' : ''}
+    </td>
   </tr>`;
 }
+
+// "ver mais / ver menos" da descrição (delegado: vale para o card e para o modal)
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.os-ver-mais');
+  if (!btn) return;
+  const desc = btn.previousElementSibling;
+  const aberta = desc.classList.toggle('os-desc-recolhida') === false;
+  btn.textContent = aberta ? 'ver menos' : 'ver mais';
+});
 
 // Aceita vários formatos de resposta do n8n
 function normalizarHistoricoPotencia(raw) {
@@ -1579,19 +1716,10 @@ function bindDashboardEvents(contrato) {
       label.textContent = 'Carregando...';
 
       try {
-        const raw = await postWebhook(WEBHOOK.url('busca_todas_os'), {
+        // Usa a lista já carregada em segundo plano; só busca de novo se ela ainda não chegou
+        const todas = state.osTodas || normalizarOsLista(await postWebhook(WEBHOOK.url('busca_todas_os'), {
           login_id:   state.loginSelecionado?.login_id,
           cliente_id: state.clienteSelecionado?.cliente_id
-        });
-        const bloco = Array.isArray(raw) ? (raw[0] || {}) : raw;
-        const osRaw = bloco['ordem_de_serviço'] || bloco.ordens_servico || [];
-        const todas = osRaw.map(o => ({
-          os_id:    o.id_ordem            || '—',
-          data:     o.data_abertura_ordem || '',
-          assunto:  o.assunto_ordem       || o.id_assunto || '—',
-          setor:    SETORES[String(o.setor_ordem)] || o.setor_ordem || '—',
-          status:   mapStatusOS(o.status_ordem),
-          descricao: o.mensagem_ordem     || '—',
         }));
 
         // Abre o modal com todas as OS
@@ -2113,6 +2241,7 @@ function normalizarContrato(raw) {
     data:     o.data_abertura_ordem || '',
     assunto:  o.assunto_ordem       || o.id_assunto || '—',
     setor:    SETORES[String(o.setor_ordem)] || o.setor_ordem || '—',
+    setor_id: String(o.setor_ordem ?? ''),
     status:   mapStatusOS(o.status_ordem),
     descricao: o.mensagem_ordem     || '—',
   }));

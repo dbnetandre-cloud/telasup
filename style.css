@@ -965,11 +965,18 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   margin-bottom: 20px;
 }
 
+/* O card estica até a altura do vizinho (Avisos). Os campos ficam no topo e a
+   linha das ações absorve a sobra e se ancora embaixo, em vez de deixar um vão. */
 .geral-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto 1fr;
   gap: 14px;
+  flex: 1;
 }
+/* Data de Cadastro vai logo abaixo da Data de Nascimento (coluna 1) */
+.geral-field-cadastro { grid-column: 1; }
+.geral-grid .geral-acoes { align-self: end; }
 .geral-field { display: flex; flex-direction: column; gap: 3px; }
 .geral-field-label {
   font-size: 11px;
@@ -1329,7 +1336,7 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
 }
 .avisos-lista { flex: 1; min-width: 0; }
 .os-contadores {
-  flex: 0 0 190px;
+  flex: 0 0 245px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1345,6 +1352,7 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   border-radius: var(--radius-md);
 }
 .os-contador-qtd {
+  flex-shrink: 0;
   min-width: 40px;
   text-align: center;
   font-size: 36px;
@@ -1352,23 +1360,72 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   line-height: 1;
   color: var(--amber);
 }
+.os-contador-carregando {
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  animation: pulse 1.2s infinite;
+}
+.os-contador-retencao .os-contador-carregando,
+.os-contador-n3 .os-contador-carregando { color: var(--text-muted); }
 .os-contador-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--text-primary);
 }
 .os-contador-periodo {
-  font-size: 11px;
-  color: var(--text-muted);
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 .os-contador-retencao {
   background: var(--red-dim);
   border-color: rgba(244,63,94,0.25);
 }
 .os-contador-retencao .os-contador-qtd { color: var(--red); }
+.os-contador-n3 {
+  background: var(--blue-dim);
+  border-color: rgba(0,112,243,0.25);
+}
+.os-contador-n3 .os-contador-qtd { color: var(--cyan); }
 
 /* ─── CARD OS ─────────────────────────────────────────── */
-.card-os { grid-column: span 4; }
+.card-os { grid-column: span 2; }
+
+/* Fibra/ONU: transmissor, PON ID, MAC e VLAN ficam recolhidos (informação secundária) */
+.onu-detalhes { margin-top: 2px; }
+.onu-detalhes summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.onu-detalhes summary::-webkit-details-marker { display: none; }
+.onu-detalhes summary::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--transition);
+}
+.onu-detalhes[open] summary::before { transform: rotate(45deg); }
+.onu-detalhes summary:hover { color: var(--text-primary); }
+
+/* Notebook (1201–1699px, 4 colunas):
+   Fibra/ONU e Central do Assinante empilhadas na coluna 1; OS nas colunas 2-4, ao lado das duas */
+@media (min-width: 1201px) and (max-width: 1699px) {
+  .card-fibra  { grid-column: 1; grid-row: 2; }
+  .card-acesso { grid-column: 1; grid-row: 3; }
+  .card-os     { grid-column: 2 / span 3; grid-row: 2 / span 2; }
+}
 
 .os-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .os-table th {
@@ -1389,12 +1446,40 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   overflow-wrap: break-word;
 }
 .os-table tr:last-child td { border-bottom: none; }
-.os-table .col-id     { width: 6%;  color: var(--text-muted); font-family: monospace; font-size: 12px; }
-.os-table .col-date   { width: 8%;  color: var(--text-secondary); white-space: nowrap; }
-.os-table .col-type   { width: 18%; color: var(--text-primary); font-weight: 500; }
-.os-table .col-setor  { width: 10%; color: var(--text-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.os-table .col-status { width: 10%; }
-.os-table .col-desc   { width: 48%; color: var(--text-secondary); }
+.os-table .col-id     { width: 12%; white-space: nowrap; }
+.os-table .col-type   { width: 23%; }
+.os-table .col-diag   { width: 16%; color: var(--text-secondary); }
+.os-table .col-status { width: 13%; }
+.os-table .col-desc   { width: 36%; color: var(--text-secondary); }
+.os-diag {
+  font-size: 12.5px;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.os-data     { font-size: 12px; color: var(--text-secondary); }
+.os-assunto  { color: var(--text-primary); font-weight: 600; line-height: 1.3; }
+.os-setor    { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.os-desc     { font-size: 12.5px; line-height: 1.45; }
+.os-desc-recolhida {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.os-ver-mais {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue);
+  cursor: pointer;
+}
+.os-ver-mais:hover { text-decoration: underline; }
 .os-table .col-pot-date   { width: 34%; color: var(--text-secondary); white-space: nowrap; }
 .os-table .col-pot-signal { width: 33%; font-family: monospace; }
 .os-table .col-pot-temp   { width: 33%; color: var(--text-secondary); font-family: monospace; }
@@ -1440,7 +1525,8 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
 .os-footer {
   display: flex;
   justify-content: flex-end;
-  margin-top: 14px;
+  margin-top: auto;   /* o card estica até o vizinho: o botão fica no fundo, sem vão embaixo */
+  padding-top: 14px;
 }
 .btn-ver-todas {
   display: inline-flex;
@@ -1690,6 +1776,17 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
 /* ══════════════════════════════════════════════════════
    RESPONSIVE
 ══════════════════════════════════════════════════════ */
+/* Monitores grandes (Full HD+): dashboard em 5 colunas.
+   Linha 1: Geral (col 1-2) + Avisos (col 3-4) + Central do Assinante/PPPoE (col 5)
+   Linha 2: Fibra (col 1) + OS (col 2-4) + próximo card de 1 coluna (col 5) */
+@media (min-width: 1700px) {
+  #screen-dashboard .page-container { max-width: 1800px; }
+  .dashboard-grid { grid-template-columns: repeat(5, 1fr); }
+  .card-avisos    { grid-column: span 2; }
+  .card-acesso    { grid-column: 5; grid-row: 1; }
+  .card-os        { grid-column: span 3; }
+}
+
 @media (max-width: 1200px) {
   .dashboard-grid { grid-template-columns: repeat(3, 1fr); }
   .card-geral     { grid-column: span 2; }
@@ -1700,8 +1797,8 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .dashboard-grid { grid-template-columns: repeat(2, 1fr); }
   .card-geral     { grid-column: span 2; }
   .card-os        { grid-column: span 2; }
-  .geral-grid     { grid-template-columns: 1fr; }
-  .geral-acoes    { justify-content: flex-start; }
+  .geral-grid     { grid-template-columns: 1fr; grid-template-rows: auto auto auto auto 1fr; }
+  .geral-acoes   { justify-content: flex-start; }
 }
 
 @media (max-width: 600px) {
