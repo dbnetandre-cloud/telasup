@@ -1,0 +1,119 @@
+/* ══════════════════════════════════════════════════════
+   SHELL — barra de abas (estilo navegador) + iframes
+   Usa as variáveis de tema do style.css
+══════════════════════════════════════════════════════ */
+html, body.shell { height: 100%; }
+body.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tabbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 6px 10px 0;
+  background: var(--surface-3);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 220px;
+  min-width: 70px;
+  max-width: 220px;
+  height: 34px;
+  padding: 0 8px 0 12px;
+  border-radius: 10px 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.tab:hover { background: var(--tint); color: var(--text-primary); }
+.tab.ativa {
+  background: var(--bg);
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: default;
+}
+/* "curvas" externas da aba ativa, como no Chrome */
+.tab.ativa::before,
+.tab.ativa::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at var(--cx) 0, transparent 10px, var(--bg) 10.5px);
+  pointer-events: none;
+}
+.tab.ativa::before { left: -10px;  --cx: 0; }
+.tab.ativa::after  { right: -10px; --cx: 10px; }
+
+.tab-ico { display: inline-flex; flex: 0 0 auto; color: var(--text-muted); }
+.tab.ativa .tab-ico { color: var(--green); }
+.tab.vazia .tab-titulo { font-style: italic; }
+
+.tab-titulo {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tab-fechar {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--text-muted);
+  transition: background var(--transition), color var(--transition);
+}
+.tab-fechar:hover { background: var(--border-hover); color: var(--text-primary); }
+
+.tab-new {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: 0 0 3px 4px;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: background var(--transition), color var(--transition);
+}
+.tab-new:hover { background: var(--border-hover); color: var(--text-primary); }
+
+.tab-frames { flex: 1 1 auto; min-height: 0; position: relative; }
+.tab-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: var(--bg);
+  display: none;
+}
+.tab-frame.ativo { display: block; }

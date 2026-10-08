@@ -603,6 +603,7 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 8px;
 }
 .dashboard-topbar {
+  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: flex-end;

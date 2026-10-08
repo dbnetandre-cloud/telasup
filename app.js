@@ -68,6 +68,7 @@ function alternarTema() {
   const novo  = TEMAS[(idx + 1) % TEMAS.length];
   aplicarTema(novo);
   try { localStorage.setItem(THEME_KEY, novo); } catch (_) {}
+  avisarShell({ type: 'tema', tema: novo });
 }
 
 function atualizarTituloTema() {
@@ -82,6 +83,32 @@ function bindThemeToggleButton(btn) {
   if (!btn) return;
   btn.addEventListener('click', () => { alternarTema(); atualizarTituloTema(); });
 }
+
+// ══════════════════════════════════════════════════════
+// ABAS — o app roda dentro de um iframe do index.html (uma aba = um iframe)
+// ══════════════════════════════════════════════════════
+const ABA_ID = new URLSearchParams(window.location.search).get('tab') || 'unica';
+
+function avisarShell(msg) {
+  if (window.parent === window) return;   // aberto direto (app.html), sem shell
+  window.parent.postMessage({ ...msg, tab: ABA_ID }, '*');
+}
+
+window.addEventListener('message', e => {
+  if (e.source !== window.parent) return;
+  if (e.data?.type === 'tema' && TEMAS.includes(e.data.tema)) {
+    aplicarTema(e.data.tema);
+    atualizarTituloTema();
+  }
+});
+
+// Atalhos de aba (Ctrl+Alt+T / Ctrl+Alt+W) com o foco dentro do iframe: repassa ao shell
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.altKey && ['t', 'w'].includes(e.key.toLowerCase())) {
+    e.preventDefault();
+    avisarShell({ type: 'atalho', tecla: e.key.toLowerCase() });
+  }
+});
 
 // Aplica o tema salvo o quanto antes, para evitar flash de tela.
 (function initTema() {
@@ -181,7 +208,7 @@ const state = {
 // ══════════════════════════════════════════════════════
 // SESSÃO — mantém o cliente atual entre recarregamentos (F5)
 // ══════════════════════════════════════════════════════
-const SESSION_KEY = 'ideiaSupSessao';
+const SESSION_KEY = 'ideiaSupSessao:' + ABA_ID;
 
 function salvarSessao() {
   try {
@@ -619,6 +646,7 @@ function renderDashboard(cliente, contrato) {
   ].join('');
 
   showScreen('screen-dashboard');
+  avisarShell({ type: 'titulo', titulo: (cliente ? cliente.nome : contrato.nome) || '' });
   bindDashboardEvents(contrato);
   carregarOs();
   consultarPotenciaAtual(true); // ao abrir o dashboard já puxa o estado atual da ONU
@@ -1264,7 +1292,7 @@ function cardFibraONU(f) {
     <button type="button" class="btn-geral-acao btn-geral-acao-perigo btn-reiniciar-onu" id="btn-reiniciar-onu" data-id-onu="${esc(f.id_onu||'')}" title="Reiniciar a ONU do cliente">
       Reiniciar ONU
     </button>
-    <details class="onu-detalhes">
+    <details class="onu-detalhes"${window.matchMedia('(min-width: 1700px)').matches ? ' open' : ''}>
       <summary>Detalhes técnicos</summary>
       ${fieldRow(iconServer(), 'Transmissor', esc(f.transmissor))}
       ${fieldRow(iconHash(),   'PON ID',      `<span class="mono">${esc(f.pon_id||'—')}</span>`)}
@@ -1945,18 +1973,13 @@ function setupBackButtons() {
   document.getElementById('btn-back-selection').addEventListener('click', () => {
     showScreen('screen-search');
   });
-  document.getElementById('btn-back-dashboard').addEventListener('click', () => {
-    limparSessao();
-    showScreen('screen-search');
-    document.getElementById('search-input').value = '';
-    document.getElementById('search-clear').classList.add('hidden');
-  });
 }
 
 // ══════════════════════════════════════════════════════
 // SCREEN TRANSITIONS
 // ══════════════════════════════════════════════════════
 function showScreen(id) {
+  if (id === 'screen-search') avisarShell({ type: 'titulo', titulo: '' });
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   requestAnimationFrame(() => {
