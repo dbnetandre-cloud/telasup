@@ -1426,6 +1426,44 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .card-fibra  { grid-column: 1; grid-row: 2; }
   .card-acesso { grid-column: 1; grid-row: 3; }
   .card-os     { grid-column: 2 / span 3; grid-row: 2 / span 2; }
+
+  /* fonte da tabela de OS 2px menor no notebook */
+  .card-os .os-table td    { font-size: 11px; }
+  .card-os .os-table th    { font-size: 10px; }
+  .card-os .os-data        { font-size: 10px; }
+  .card-os .os-setor       { font-size: 10px; }
+  .card-os .os-diag,
+  .card-os .os-desc        { font-size: 10.5px; }
+  .card-os .os-ver-mais    { font-size: 10px; }
+  .card-os .os-status      { font-size: 9px; }
+
+  /* demais cards do dashboard: fontes 2px menores no notebook */
+  #screen-dashboard .card-title { font-size: 10px; }
+  #screen-dashboard .geral-avatar { font-size: 20px; }
+  #screen-dashboard .geral-name { font-size: 18px; }
+  #screen-dashboard .geral-cpf { font-size: 11px; }
+  #screen-dashboard .geral-conn .badge { font-size: 13px; }
+  #screen-dashboard .btn-geral-acao { font-size: 10px; }
+  #screen-dashboard .onu-signal-extra { font-size: 10px; }
+  #screen-dashboard .geral-field-label, #screen-dashboard .field-label, #screen-dashboard .login-section-label, #screen-dashboard .login-field-label { font-size: 9px; }
+  #screen-dashboard .geral-field-value, #screen-dashboard .field-value, #screen-dashboard .login-field-value { font-size: 12px; }
+  #screen-dashboard .quedas-val { font-size: 18px; }
+  #screen-dashboard .badge { font-size: 10px; }
+  #screen-dashboard .chip { font-size: 10px; }
+  #screen-dashboard .signal-icon { font-size: 18px; }
+  #screen-dashboard .signal-label, #screen-dashboard .signal-qual { font-size: 9px; }
+  #screen-dashboard .signal-value { font-size: 18px; }
+  #screen-dashboard .boleto-venc { font-size: 10px; }
+  #screen-dashboard .boleto-value { font-size: 26px; }
+  #screen-dashboard .boleto-value span { font-size: 13px; }
+  #screen-dashboard .boleto-date, #screen-dashboard .btn-boleto, #screen-dashboard .boleto-row-date { font-size: 11px; }
+  #screen-dashboard .boleto-row-valor, #screen-dashboard .no-boleto, #screen-dashboard .mvno-numero { font-size: 12px; }
+  #screen-dashboard .aviso-item { font-size: 11px; }
+  #screen-dashboard .os-contador-qtd { font-size: 34px; }
+  #screen-dashboard .os-contador-label { font-size: 12px; }
+  #screen-dashboard .os-contador-periodo { font-size: 10px; }
+  #screen-dashboard .onu-detalhes summary { font-size: 10px; }
+  #screen-dashboard .btn-ver-todas { font-size: 11px; }
 }
 
 .os-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -1447,11 +1485,12 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   overflow-wrap: break-word;
 }
 .os-table tr:last-child td { border-bottom: none; }
-.os-table .col-id     { width: 12%; white-space: nowrap; }
-.os-table .col-type   { width: 23%; }
-.os-table .col-diag   { width: 16%; color: var(--text-secondary); }
-.os-table .col-status { width: 13%; }
-.os-table .col-desc   { width: 36%; color: var(--text-secondary); }
+.os-table .col-id     { width: 10%; white-space: nowrap; }
+.os-table .col-type   { width: 18%; }
+.os-table .col-diag   { width: 13%; color: var(--text-secondary); }
+.os-table .col-status { width: 11%; }
+.os-table .col-desc   { width: 24%; color: var(--text-secondary); }
+.os-table .col-resp   { width: 24%; color: var(--text-secondary); }
 .os-diag {
   font-size: 12.5px;
   line-height: 1.35;
@@ -1815,7 +1854,8 @@ html[data-theme="green"] .btn-theme-toggle .icon-moon   { display: none; }
   .boleto-actions { flex-direction: column; }
   .btn-boleto     { flex: none; width: 100%; }
   .selection-list { grid-template-columns: 1fr; }
-  .os-table .col-desc { display: none; }
+  .os-table .col-desc,
+  .os-table .col-resp { display: none; }
   .dashboard-header { flex-direction: column; }
   .dashboard-topbar  { justify-content: space-between; width: 100%; }
   .dashboard-topbar .client-info { text-align: left; }

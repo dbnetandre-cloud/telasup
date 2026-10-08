@@ -734,6 +734,7 @@ function normalizarOsLista(raw) {
     setor_id: String(o.setor_ordem ?? ''),
     status:   mapStatusOS(o.status_ordem),
     descricao: o.mensagem_ordem     || '—',
+    resposta:  o.mensagem_resposta  || '—',
     diagnostico: o.diagnostico      || '—',
   }));
 }
@@ -1371,7 +1372,7 @@ function cardOS(os_list) {
     <table class="os-table">
       <thead>
         <tr>
-          <th class="col-id">Data</th><th class="col-type">Assunto</th><th class="col-diag">Diagnóstico</th><th class="col-status">Status</th><th class="col-desc">Descrição</th>
+          <th class="col-id">Data</th><th class="col-type">Assunto</th><th class="col-diag">Diagnóstico</th><th class="col-status">Status</th><th class="col-desc">Descrição</th><th class="col-resp">Resposta técnico</th>
         </tr>
       </thead>
       <tbody id="os-tbody">${tbody}</tbody>
@@ -1393,14 +1394,21 @@ function cardOS(os_list) {
 }
 
 function osMensagemLinha(html) {
-  return `<tr><td colspan="5" style="color:var(--text-muted);padding:12px 0;font-size:13px">${html}</td></tr>`;
+  return `<tr><td colspan="6" style="color:var(--text-muted);padding:12px 0;font-size:13px">${html}</td></tr>`;
 }
 
 const OS_DESC_LIMITE = 120; // acima disso a descrição fica recolhida com "ver mais"
 
+// Texto longo da OS (descrição / resposta do técnico): recolhido com "ver mais"
+function osTextoLongo(texto) {
+  const t = String(texto ?? '');
+  const longa = t.length > OS_DESC_LIMITE;
+  return `
+      <div class="os-desc${longa ? ' os-desc-recolhida' : ''}"${longa ? ` title="${esc(t)}"` : ''}>${esc(t)}</div>
+      ${longa ? '<button type="button" class="os-ver-mais">ver mais</button>' : ''}`;
+}
+
 function osRow(os) {
-  const desc = String(os.descricao ?? '');
-  const longa = desc.length > OS_DESC_LIMITE;
   return `
   <tr>
     <td class="col-id os-data">${formatDate(os.data)}</td>
@@ -1410,9 +1418,9 @@ function osRow(os) {
     </td>
     <td class="col-diag" title="${esc(os.diagnostico ?? '')}"><div class="os-diag">${esc(os.diagnostico || '—')}</div></td>
     <td class="col-status"><span class="os-status ${osStatusClass(os.status)}">${esc(os.status)}</span></td>
-    <td class="col-desc">
-      <div class="os-desc${longa ? ' os-desc-recolhida' : ''}"${longa ? ` title="${esc(desc)}"` : ''}>${esc(desc)}</div>
-      ${longa ? '<button type="button" class="os-ver-mais">ver mais</button>' : ''}
+    <td class="col-desc">${osTextoLongo(os.descricao)}
+    </td>
+    <td class="col-resp">${osTextoLongo(os.resposta)}
     </td>
   </tr>`;
 }
@@ -2217,6 +2225,7 @@ function normalizarContrato(raw) {
     setor_id: String(o.setor_ordem ?? ''),
     status:   mapStatusOS(o.status_ordem),
     descricao: o.mensagem_ordem     || '—',
+    resposta:  o.mensagem_resposta  || '—',
   }));
 
   return {
