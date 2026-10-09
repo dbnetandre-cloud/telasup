@@ -137,6 +137,9 @@ const WEBHOOK = {
   limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
   desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
   reiniciar_onu : 'https://n8n.dbnet.com.vc/webhook/reiniciar-onu',   // { id_onu, login_id, cliente_id }
+  liberar_acesso_web : 'https://n8n.dbnet.com.vc/webhook/liberar-acesso-web',   // { id_onu, login_id, cliente_id }
+  consumo_horas : 'https://n8n.dbnet.com.vc/webhook/consumo-ultimas-horas',   // { id_login } -> [{ data: "<json { registros: [{ data, consumo, consumo_upload }] }>" }]
+  consumo_diario_mensal : 'https://n8n.dbnet.com.vc/webhook/consumo-diario-mensal',   // { id_login } -> [ { data: "<json diário>" }, { data: "<json mensal>" } ]
   reiniciar_roteador : 'https://n8n.dbnet.com.vc/webhook/reiniciar-roteador',   // { login } → [{ content: [{ type:'text', text:'Device rebooted' }] }]
   potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',   // { id_onu, login_id, cliente_id } → [{ data: "<html do IXC>" }] (só Sinal Rx/Tx, Temperatura e Voltagem são lidos)
   status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',   // leve: { login_id, cliente_id } → { online: 'S'|'N', ip } (vazio = Recarregar refaz tudo)
@@ -152,6 +155,9 @@ const WEBHOOK = {
   test_limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
   test_desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
   test_reiniciar_onu : 'https://n8n.dbnet.com.vc/webhook/reiniciar-onu',
+  test_liberar_acesso_web : 'https://n8n.dbnet.com.vc/webhook/liberar-acesso-web',
+  test_consumo_horas : 'https://n8n.dbnet.com.vc/webhook/consumo-ultimas-horas',
+  test_consumo_diario_mensal : 'https://n8n.dbnet.com.vc/webhook/consumo-diario-mensal',
   test_reiniciar_roteador : 'https://n8n.dbnet.com.vc/webhook/reiniciar-roteador',
   test_potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',
   test_status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',
@@ -639,7 +645,7 @@ function renderDashboard(cliente, contrato) {
     cardAcesso(contrato),
     // Se o busca_info ainda trouxer as OS, mostra na hora; senão o card nasce em "carregando"
     cardOS(contrato.ordens_servico?.length ? contrato.ordens_servico : null),
-    cardComodatos(contrato.comodatos || []),
+    cardConsumo(),
     cardProdutos(contrato.produtos_contratados || []),
     cardTelefonia(contrato.telefonia || {}),
     cardMVNO(contrato.linhas_mvno || []),
@@ -648,10 +654,12 @@ function renderDashboard(cliente, contrato) {
     cardFinanceiro(contrato.financeiro || {})
   ].join('');
 
+  state.consumo = { atual: 'horas', dados: {}, pendentes: {} };   // cache do card Consumo (zera a cada cliente)
   showScreen('screen-dashboard');
   avisarShell({ type: 'titulo', titulo: (cliente ? cliente.nome : contrato.nome) || '' });
   bindDashboardEvents(contrato);
   carregarOs();
+  carregarConsumo('horas');
   consultarPotenciaAtual(true); // ao abrir o dashboard já puxa o estado atual da ONU
 }
 
@@ -1005,8 +1013,12 @@ function cardGeral(cliente, c) {
         <span class="geral-field-value">${c.data_cadastro ? formatDate(c.data_cadastro) : '—'}</span>
       </div>
       <div class="geral-acoes">
+        <span class="acao-ajuda" tabindex="0" role="note" aria-label="Só funciona se o cliente estiver no ACS">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <span class="acao-ajuda-texto">O reiniciar roteador só funciona se o cliente estiver no ACS.</span>
+        </span>
         <button type="button" class="btn-geral-acao" id="btn-reiniciar-roteador" data-login="${esc(c.login_pppoe||'')}" title="Reiniciar o roteador do cliente">
-          Reiniciar roteador
+          Reiniciar roteador (ACS)
         </button>
         <button type="button" class="btn-geral-acao" id="btn-limpar-mac" data-login="${esc(c.login_pppoe||'')}" title="Limpar o MAC vinculado ao login">
           Limpar MAC
@@ -1072,24 +1084,157 @@ function cardContatos(c) {
 }
 
 // ─── 4. COMODATOS ─────────────────────────────────────
-function cardComodatos(items) {
-  const chips = items.length
-    ? items.map(i => `<span class="chip">${esc(i)}</span>`).join('')
-    : '<span style="color:var(--text-muted);font-size:13px">Nenhum equipamento em comodato</span>';
+// ─── CONSUMO (substitui o antigo card de Comodatos) ───
+// "Últimas horas" carrega junto com o dashboard; Diário e Mensal só chamam o webhook
+// (uma única vez, traz os dois) quando uma dessas abas é clicada. Tudo fica em cache
+// até trocar de cliente.
+const CONSUMO_PERIODOS = [
+  { id: 'horas',  label: 'Últimas horas' },
+  { id: 'diario', label: 'Diário' },
+  { id: 'mensal', label: 'Mensal' },
+];
+
+function cardConsumo() {
+  const abas = CONSUMO_PERIODOS.map(p =>
+    `<button type="button" class="cons-tab${p.id === 'horas' ? ' ativa' : ''}" data-periodo="${p.id}">${p.label}</button>`
+  ).join('');
   return `
-  <div class="card">
+  <div class="card card-consumo">
     <div class="card-header">
-      <div class="card-icon" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2)">
+      <div class="card-icon" style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.2)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <rect x="2" y="3" width="20" height="14" rx="2" stroke="#f59e0b" stroke-width="2"/>
-          <path d="M8 21h8M12 17v4" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+          <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke="#00d4ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
-      <span class="card-title">Comodatos</span>
+      <span class="card-title">Consumo</span>
     </div>
-    <div class="chip-list">${chips}</div>
+    <div class="cons-tabs" role="tablist">${abas}</div>
+    <div class="cons-corpo">
+      <div class="cons-corpo-in" id="cons-corpo">${consumoMensagem('Carregando consumo...', true)}</div>
+    </div>
   </div>`;
 }
+
+function consumoMensagem(html, carregando) {
+  return `<div class="cons-msg">${carregando ? '<span class="spinner" style="width:14px;height:14px;vertical-align:-2px;margin-right:8px"></span>' : ''}${html}</div>`;
+}
+
+// bytes → texto legível (base 1024)
+function formatBytes(n) {
+  n = Number(n) || 0;
+  const un = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  while (n >= 1024 && i < un.length - 1) { n /= 1024; i++; }
+  return `${(i === 0 || n >= 100 ? n.toFixed(0) : n.toFixed(1)).replace('.', ',')} ${un[i]}`;
+}
+
+// Um item do n8n: { data: "<json { registros: [...] }>" } (ou o objeto já tratado)
+function registrosConsumo(item) {
+  let obj = item?.data ?? item;
+  if (typeof obj === 'string') obj = JSON.parse(obj);
+  const lista = Array.isArray(obj) ? obj : (obj?.registros ?? []);
+  return (Array.isArray(lista) ? lista : []).map(r => ({
+    data: String(r.data ?? ''),
+    down: Number(r.consumo) || 0,
+    up:   Number(r.consumo_upload) || 0,
+  }));
+}
+
+// consumo-ultimas-horas: [ item ]
+function normalizarConsumoHoras(raw) {
+  return registrosConsumo(Array.isArray(raw) ? raw[0] : raw);
+}
+
+// consumo-diario-mensal: um único retorno com os dois itens, nesta ordem: [ diário, mensal ]
+function normalizarConsumoDiarioMensal(raw) {
+  const itens = Array.isArray(raw) ? raw : [raw];
+  return { diario: registrosConsumo(itens[0]), mensal: registrosConsumo(itens[1]) };
+}
+
+function consumoHtml(regs, periodo) {
+  if (!regs.length) return consumoMensagem('Nenhum consumo registrado neste período.');
+
+  const max = Math.max(...regs.map(r => Math.max(r.down, r.up)), 1);
+  const totDown = regs.reduce((s, r) => s + r.down, 0);
+  const totUp   = regs.reduce((s, r) => s + r.up, 0);
+  const larg = v => Math.max(v / max * 62, v > 0 ? 1.5 : 0).toFixed(1);
+
+  let diaAnterior = '';
+  const linhas = regs.map(r => {
+    const [dia = '', hora = ''] = r.data.split(' ');
+    const [a, m, d] = dia.split('-');
+    let rotulo = r.data;
+    let cabecalho = '';
+    if (periodo === 'horas' && hora) {
+      rotulo = hora.slice(0, 5);
+      if (dia !== diaAnterior) { cabecalho = `<div class="cons-dia">${d}/${m}/${a}</div>`; diaAnterior = dia; }
+    } else if (periodo === 'diario' && d) {
+      rotulo = `${d}/${m}`;
+    } else if (periodo === 'mensal' && m) {
+      rotulo = `${m}/${a}`;
+    }
+    return `${cabecalho}
+    <div class="cons-linha">
+      <span class="cons-rotulo">${esc(rotulo)}</span>
+      <div class="cons-barras">
+        <div class="cons-barra-linha"><i class="cons-barra down" style="width:${larg(r.down)}%"></i><span>${formatBytes(r.down)}</span></div>
+        <div class="cons-barra-linha"><i class="cons-barra up" style="width:${larg(r.up)}%"></i><span>${formatBytes(r.up)}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="cons-resumo">
+      <div><span class="cons-ponto down"></span><span class="cons-resumo-label">Download</span><strong>${formatBytes(totDown)}</strong></div>
+      <div><span class="cons-ponto up"></span><span class="cons-resumo-label">Upload</span><strong>${formatBytes(totUp)}</strong></div>
+    </div>
+    <div class="cons-lista">${linhas}</div>`;
+}
+
+async function carregarConsumo(periodo) {
+  const c = state.consumo;
+  if (!c) return;
+  c.atual = periodo;
+  document.querySelectorAll('.cons-tab').forEach(b => b.classList.toggle('ativa', b.dataset.periodo === periodo));
+
+  const corpo = document.getElementById('cons-corpo');
+  if (!corpo) return;
+  if (c.dados[periodo]) { corpo.innerHTML = consumoHtml(c.dados[periodo], periodo); return; }
+
+  corpo.innerHTML = consumoMensagem('Carregando consumo...', true);
+  // Diário e Mensal vêm no mesmo webhook (uma chamada traz os dois e ficam guardados).
+  // Se já há uma chamada em andamento para o grupo, reaproveita em vez de disparar de novo.
+  const grupo = periodo === 'horas' ? 'horas' : 'diarioMensal';
+  try {
+    if (!c.pendentes[grupo]) c.pendentes[grupo] = buscarConsumo(grupo, state.loginSelecionado?.login_id);
+    const res = await c.pendentes[grupo];
+    if (state.consumo !== c) return;                      // trocou de cliente enquanto esperava
+    Object.assign(c.dados, res);
+    if (c.atual === periodo) document.getElementById('cons-corpo').innerHTML = consumoHtml(c.dados[periodo], periodo);
+  } catch (err) {
+    console.error('[consumo]', err);
+    delete c.pendentes[grupo];                            // permite "Tentar novamente"
+    if (state.consumo === c && c.atual === periodo) {
+      document.getElementById('cons-corpo').innerHTML =
+        consumoMensagem('Erro ao carregar o consumo. <a href="#" class="cons-retry">Tentar novamente</a>');
+    }
+  }
+}
+
+// Devolve { horas } ou { diario, mensal }
+async function buscarConsumo(grupo, idLogin) {
+  if (grupo === 'horas') {
+    return { horas: normalizarConsumoHoras(await postWebhook(WEBHOOK.url('consumo_horas'), { id_login: idLogin })) };
+  }
+  return normalizarConsumoDiarioMensal(await postWebhook(WEBHOOK.url('consumo_diario_mensal'), { id_login: idLogin }));
+}
+
+document.addEventListener('click', e => {
+  const aba = e.target.closest('.cons-tab');
+  if (aba) { carregarConsumo(aba.dataset.periodo); return; }
+  const retry = e.target.closest('.cons-retry');
+  if (retry) { e.preventDefault(); carregarConsumo(state.consumo?.atual || 'horas'); }
+});
 
 // ─── 5. CENTRAL DO ASSINANTE + PPPOE ──────────────────
 // Um card só — os dois blocos sempre têm o mesmo tamanho,
@@ -1284,6 +1429,15 @@ function cardFibraONU(f) {
       <span id="btn-potencia-atual-icon">${iconReload()}</span>
       <span id="btn-potencia-atual-label">Potência atual</span>
     </button>
+    <div class="acao-com-ajuda">
+      <button type="button" class="btn-geral-acao btn-liberar-web" id="btn-liberar-web" data-id-onu="${esc(f.id_onu||'')}" title="Liberar o acesso web (administração) da ONU">
+        Liberar acesso Web
+      </button>
+      <span class="acao-ajuda acao-ajuda-direita" tabindex="0" role="note" aria-label="Só funciona com ONT Huawei integrada">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <span class="acao-ajuda-texto">Só funciona com ONT Huawei integrada.</span>
+      </span>
+    </div>
     <button type="button" class="btn-geral-acao btn-geral-acao-perigo btn-reiniciar-onu" id="btn-reiniciar-onu" data-id-onu="${esc(f.id_onu||'')}" title="Reiniciar a ONU do cliente">
       Reiniciar ONU
     </button>
@@ -1638,8 +1792,12 @@ function bindDashboardEvents(contrato) {
   if (btnPotAtual) btnPotAtual.addEventListener('click', () => consultarPotenciaAtual(false));
 
   // Limpar MAC / Desconectar login — pedem confirmação e chamam o webhook
-  bindAcaoLogin('btn-reiniciar-roteador', 'reiniciar_roteador', 'Reiniciar o roteador do login', 'Roteador reiniciado com sucesso.', { soLogin: true });
+  bindAcaoLogin('btn-reiniciar-roteador', 'reiniciar_roteador', 'Reiniciar o roteador do login', 'Roteador reiniciado com sucesso.', {
+    soLogin: true,
+    msgErro: 'Não foi possível reiniciar o roteador. Confirme se o cliente está no ACS.'
+  });
   bindAcaoLogin('btn-limpar-mac',        'limpar_mac',        'Limpar o MAC do login',  'MAC limpo com sucesso.');
+  bindAcaoLogin('btn-liberar-web',       'liberar_acesso_web', 'Liberar o acesso Web da ONU', 'Acesso Web liberado com sucesso.');
   bindAcaoLogin('btn-reiniciar-onu',     'reiniciar_onu',     'Reiniciar a ONU',        'ONU reiniciada com sucesso.');
   bindAcaoLogin('btn-desconectar-login', 'desconectar_login', 'Desconectar o login',    'Login desconectado com sucesso.');
 
@@ -2575,6 +2733,12 @@ function extrairResultadoAcao(raw) {
   try {
     const item = Array.isArray(raw) ? raw[0] : raw;
 
+    // Formato { error: { message } } — a ação falhou (ex.: reiniciar roteador)
+    if (item?.error) {
+      const e = item.error;
+      return { type: 'error', message: String(typeof e === 'string' ? e : (e.message ?? '')).trim() };
+    }
+
     // Formato { content: [{ type: 'text', text }] } (ex.: reiniciar roteador → "Device rebooted")
     if (Array.isArray(item?.content)) {
       const textos = item.content.map(c => String(c?.text ?? '').trim()).filter(Boolean);
@@ -2605,6 +2769,7 @@ function extrairResultadoAcao(raw) {
 
 // Botão que dispara uma ação sobre o login PPPoE do cliente (webhook key = chave em WEBHOOK)
 // opcoes.soLogin: envia só { login } (como o pegar_url_acs), sem os demais campos
+// opcoes.msgErro: texto de abertura do alerta quando o webhook devolve falha
 function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso, opcoes = {}) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
@@ -2632,8 +2797,11 @@ function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso, opcoes = {}) {
         cliente_id: state.clienteSelecionado?.cliente_id
       });
       const res = extrairResultadoAcao(raw);
-      if (res.type && res.type !== 'success') alert(res.message || 'A ação não foi concluída.');
-      else alert(res.message || msgSucesso);
+      if (res.type && res.type !== 'success') {
+        alert(opcoes.msgErro
+          ? `${opcoes.msgErro}${res.message ? `\n\nDetalhe: ${res.message}` : ''}`
+          : (res.message || 'A ação não foi concluída.'));
+      } else alert(res.message || msgSucesso);
     } catch (err) {
       console.error(`[${webhookKey}]`, err);
       alert('Erro ao executar a ação. Tente novamente.');
