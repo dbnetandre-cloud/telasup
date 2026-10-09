@@ -646,6 +646,7 @@ function renderDashboard(cliente, contrato) {
     // Se o busca_info ainda trouxer as OS, mostra na hora; senão o card nasce em "carregando"
     cardOS(contrato.ordens_servico?.length ? contrato.ordens_servico : null),
     cardConsumo(),
+    cardComodatos(contrato.comodatos || []),
     cardProdutos(contrato.produtos_contratados || []),
     cardTelefonia(contrato.telefonia || {}),
     cardMVNO(contrato.linhas_mvno || []),
@@ -1084,7 +1085,26 @@ function cardContatos(c) {
 }
 
 // ─── 4. COMODATOS ─────────────────────────────────────
-// ─── CONSUMO (substitui o antigo card de Comodatos) ───
+function cardComodatos(items) {
+  const chips = items.length
+    ? items.map(i => `<span class="chip">${esc(i)}</span>`).join('')
+    : '<span style="color:var(--text-muted);font-size:13px">Nenhum equipamento em comodato</span>';
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="3" width="20" height="14" rx="2" stroke="#f59e0b" stroke-width="2"/>
+          <path d="M8 21h8M12 17v4" stroke="#f59e0b" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="card-title">Comodatos</span>
+    </div>
+    <div class="chip-list">${chips}</div>
+  </div>`;
+}
+
+// ─── CONSUMO (ocupa o lugar do Comodatos; Comodatos vem logo depois) ───
 // "Últimas horas" carrega junto com o dashboard; Diário e Mensal só chamam o webhook
 // (uma única vez, traz os dois) quando uma dessas abas é clicada. Tudo fica em cache
 // até trocar de cliente.
