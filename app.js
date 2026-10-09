@@ -137,6 +137,7 @@ const WEBHOOK = {
   limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
   desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
   reiniciar_onu : 'https://n8n.dbnet.com.vc/webhook/reiniciar-onu',   // { id_onu, login_id, cliente_id }
+  reiniciar_roteador : 'https://n8n.dbnet.com.vc/webhook/reiniciar-roteador',   // { login } → [{ content: [{ type:'text', text:'Device rebooted' }] }]
   potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',   // { id_onu, login_id, cliente_id } → [{ data: "<html do IXC>" }] (só Sinal Rx/Tx, Temperatura e Voltagem são lidos)
   status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',   // leve: { login_id, cliente_id } → { online: 'S'|'N', ip } (vazio = Recarregar refaz tudo)
 
@@ -151,6 +152,7 @@ const WEBHOOK = {
   test_limpar_mac : 'https://n8n.dbnet.com.vc/webhook/limpar-mac',
   test_desconectar_login : 'https://n8n.dbnet.com.vc/webhook/desconectar-login',
   test_reiniciar_onu : 'https://n8n.dbnet.com.vc/webhook/reiniciar-onu',
+  test_reiniciar_roteador : 'https://n8n.dbnet.com.vc/webhook/reiniciar-roteador',
   test_potencia_atual : 'https://n8n.dbnet.com.vc/webhook/puxar-potencia-atual',
   test_status_conexao : 'https://n8n.dbnet.com.vc/webhook/recarregar-ip',
 
@@ -554,6 +556,7 @@ async function etapa4_carregarDashboard(loginObj) {
   const contrato = normalizarContrato(raw);
   const cliente  = state.clienteSelecionado;
   state.contratoId = contrato.contrato_id;
+  state.comodatos  = contrato.comodatos || [];
   renderDashboard(cliente, contrato);
   salvarSessao();
 }
@@ -907,6 +910,15 @@ function cardAvisos(c) {
 
 // Recebe uma data ISO (string) e devolve "Xd Yh" / "Xh" / "X min" desde então.
 // Retorna null se a data não vier preenchida ou for inválida.
+// Roteadores cuja página de administração só abre em https (identificados pelo modelo no comodato)
+const ROTEADORES_HTTPS = ['PSDN-AX30'];
+
+function urlRoteador(ip, comodatos) {
+  const lista = (comodatos || []).map(e => String(e).toUpperCase());
+  const https = lista.some(e => ROTEADORES_HTTPS.some(m => e.includes(m)));
+  return `${https ? 'https' : 'http'}://${ip}`;
+}
+
 function formatDuracaoOffline(dataISO) {
   if (!dataISO) return null;
   const inicio = new Date(dataISO).getTime();
@@ -944,7 +956,7 @@ function cardGeral(cliente, c) {
   const quedasClass = quedas >= 5 ? 'high' : quedas >= 2 ? 'med' : 'low';
 
   return `
-  <div class="card card-geral">
+  <div class="card card-geral ${c.status_conexao === 'online' ? 'conn-online' : 'conn-offline'}">
     <div class="card-header">
       <div class="card-icon" style="background:rgba(0,112,243,0.12);border:1px solid rgba(0,112,243,0.2)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -954,6 +966,9 @@ function cardGeral(cliente, c) {
       </div>
       <span class="card-title">Dados Gerais</span>
       <span class="geral-conn" id="geral-conn">${connBadge}</span>
+      <button type="button" class="btn-geral-acao btn-recarregar-icone" id="btn-recarregar" data-login="${esc(c.login_pppoe||'')}" title="Recarregar status online/offline e IP" aria-label="Recarregar">
+        <span id="btn-recarregar-icon">${iconReload()}</span>
+      </button>
     </div>
     <div class="geral-main">
       <div class="geral-avatar">${initials}</div>
@@ -968,7 +983,7 @@ function cardGeral(cliente, c) {
         <span class="geral-field-label">IP do Roteador</span>
         <div style="display:flex;align-items:center;gap:8px">
           <span class="geral-field-value" id="geral-ip-value">${esc(c.ip_roteador||'—')}</span>
-          ${c.ip_roteador ? `<a href="http://${esc(c.ip_roteador)}" id="geral-ip-link" target="_blank" rel="noopener" class="btn-ip-open" title="Abrir no navegador">
+          ${c.ip_roteador ? `<a href="${esc(urlRoteador(c.ip_roteador, c.comodatos))}" id="geral-ip-link" target="_blank" rel="noopener" class="btn-ip-open" title="Abrir no navegador">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               <polyline points="15 3 21 3 21 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -990,14 +1005,13 @@ function cardGeral(cliente, c) {
         <span class="geral-field-value">${c.data_cadastro ? formatDate(c.data_cadastro) : '—'}</span>
       </div>
       <div class="geral-acoes">
-        <button type="button" class="btn-geral-acao btn-geral-acao-icone" id="btn-recarregar" data-login="${esc(c.login_pppoe||'')}" title="Atualizar status online/offline e IP">
-          <span id="btn-recarregar-icon">${iconReload()}</span>
-          Recarregar
+        <button type="button" class="btn-geral-acao" id="btn-reiniciar-roteador" data-login="${esc(c.login_pppoe||'')}" title="Reiniciar o roteador do cliente">
+          Reiniciar roteador
         </button>
         <button type="button" class="btn-geral-acao" id="btn-limpar-mac" data-login="${esc(c.login_pppoe||'')}" title="Limpar o MAC vinculado ao login">
           Limpar MAC
         </button>
-        <button type="button" class="btn-geral-acao btn-geral-acao-perigo" id="btn-desconectar-login" data-login="${esc(c.login_pppoe||'')}" title="Derrubar a conexão do login">
+        <button type="button" class="btn-geral-acao" id="btn-desconectar-login" data-login="${esc(c.login_pppoe||'')}" title="Derrubar a conexão do login">
           Desconectar login
         </button>
       </div>
@@ -1624,6 +1638,7 @@ function bindDashboardEvents(contrato) {
   if (btnPotAtual) btnPotAtual.addEventListener('click', () => consultarPotenciaAtual(false));
 
   // Limpar MAC / Desconectar login — pedem confirmação e chamam o webhook
+  bindAcaoLogin('btn-reiniciar-roteador', 'reiniciar_roteador', 'Reiniciar o roteador do login', 'Roteador reiniciado com sucesso.', { soLogin: true });
   bindAcaoLogin('btn-limpar-mac',        'limpar_mac',        'Limpar o MAC do login',  'MAC limpo com sucesso.');
   bindAcaoLogin('btn-reiniciar-onu',     'reiniciar_onu',     'Reiniciar a ONU',        'ONU reiniciada com sucesso.');
   bindAcaoLogin('btn-desconectar-login', 'desconectar_login', 'Desconectar o login',    'Login desconectado com sucesso.');
@@ -2530,6 +2545,11 @@ function aplicarStatusConexao(raw) {
 
   if (r.online !== undefined) {
     const on = r.online === 'S' || r.online === true || r.online === 'true' || r.online === 'online';
+    const cardGeralEl = document.getElementById('geral-conn').closest('.card-geral');
+    if (cardGeralEl) {
+      cardGeralEl.classList.toggle('conn-online', on);
+      cardGeralEl.classList.toggle('conn-offline', !on);
+    }
     document.getElementById('geral-conn').innerHTML = on
       ? `<span class="badge badge-online"><span class="badge-dot"></span>Online</span>`
       : `<span class="badge badge-offline"><span class="badge-dot"></span>Offline</span>`;
@@ -2540,7 +2560,7 @@ function aplicarStatusConexao(raw) {
     document.getElementById('geral-ip-value').textContent = ip || '—';
     const link = document.getElementById('geral-ip-link');
     if (link) {
-      link.href = `http://${ip}`;
+      link.href = urlRoteador(ip, state.comodatos);
       link.style.display = ip ? '' : 'none';
     }
   }
@@ -2554,6 +2574,16 @@ function aplicarStatusConexao(raw) {
 function extrairResultadoAcao(raw) {
   try {
     const item = Array.isArray(raw) ? raw[0] : raw;
+
+    // Formato { content: [{ type: 'text', text }] } (ex.: reiniciar roteador → "Device rebooted")
+    if (Array.isArray(item?.content)) {
+      const textos = item.content.map(c => String(c?.text ?? '').trim()).filter(Boolean);
+      // "Device rebooted" é só confirmação: devolve vazio para valer a mensagem de sucesso do botão
+      const sucesso = !item.isError && textos.length > 0;
+      const confirmacao = /^device rebooted$/i.test(textos.join(' '));
+      return { type: sucesso ? 'success' : 'error', message: confirmacao ? '' : textos.join('\n') };
+    }
+
     let obj = item?.data ?? item;
     if (typeof obj === 'string') obj = JSON.parse(obj);
     if (!obj || typeof obj !== 'object') return {};
@@ -2574,7 +2604,8 @@ function extrairResultadoAcao(raw) {
 }
 
 // Botão que dispara uma ação sobre o login PPPoE do cliente (webhook key = chave em WEBHOOK)
-function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso) {
+// opcoes.soLogin: envia só { login } (como o pegar_url_acs), sem os demais campos
+function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso, opcoes = {}) {
   const btn = document.getElementById(btnId);
   if (!btn) return;
   btn.addEventListener('click', async () => {
@@ -2594,7 +2625,7 @@ function bindAcaoLogin(btnId, webhookKey, descricao, msgSucesso) {
     btn.disabled = true;
     btn.textContent = 'Aguarde...';
     try {
-      const raw = await postWebhook(url, {
+      const raw = await postWebhook(url, opcoes.soLogin ? { login } : {
         login,
         id_onu:     idOnu,
         login_id:   state.loginSelecionado?.login_id,
