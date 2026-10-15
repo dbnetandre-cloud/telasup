@@ -1826,7 +1826,7 @@ function bindDashboardEvents(contrato) {
     btnAbrirAtendimento.addEventListener('click', () => {
       document.getElementById('form-atendimento').reset();
       document.getElementById('atendimento-descricao').style.height = '';
-      document.getElementById('atendimento-aviso-330').classList.add('hidden');
+      document.getElementById('atendimento-aviso').classList.add('hidden');
       const erroEl = document.getElementById('atendimento-erro');
       erroEl.classList.add('hidden');
       erroEl.classList.remove('success');
@@ -2017,6 +2017,9 @@ function closeModalPotencia() {
 // ══════════════════════════════════════════════════════
 // MODAL ABRIR ATENDIMENTO
 // ══════════════════════════════════════════════════════
+// Assuntos que mostram o aviso "Lembre-se de fechar a ordem de serviço"
+const ASSUNTOS_COM_AVISO = ['99', '330'];
+
 // Modelo de descrição pré-preenchido por assunto (id → template)
 const ASSUNTO_TEMPLATES = {
   '99':  'CLIENTE APRESENTA QUAL PROBLEMA?\nOUTROS (  ) - LENTIDÃO (  ) - QUEDAS (  ) - SEM CONEXÃO (  )\n--\nOBS.:',
@@ -2040,7 +2043,7 @@ function setupModalAtendimento() {
   document.getElementById('atendimento-assunto').addEventListener('change', (e) => {
     descricaoEl.value = ASSUNTO_TEMPLATES[e.target.value] || '';
     autoResizeTextarea(descricaoEl);
-    document.getElementById('atendimento-aviso-330').classList.toggle('hidden', e.target.value !== '330');
+    document.getElementById('atendimento-aviso').classList.toggle('hidden', !ASSUNTOS_COM_AVISO.includes(e.target.value));
   });
 
   // Ajusta a altura automaticamente conforme o texto digitado
