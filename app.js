@@ -129,8 +129,7 @@ const WEBHOOK = {
   busca_logins   : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-logins',
   busca_info     : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-informacoes',
   busca_todas_os : 'https://n8n.dbnet.com.vc/webhook/ideia-busca-todas-os',
-  // TODO: trocar para o webhook de produção quando estiver pronto
-  abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook-test/telasup-abrir-atendimento',
+  abrir_atendimento : 'https://n8n.dbnet.com.vc/webhook/telasup-abrir-atendimento',
   historico_potencia : 'https://n8n.dbnet.com.vc/webhook/historico-potencia',
   pegar_url_acs : 'https://n8n.dbnet.com.vc/webhook/pegar-url-acs',
   // Ações do card Dados Gerais (enquanto a URL estiver vazia, o botão avisa que não está configurado)
